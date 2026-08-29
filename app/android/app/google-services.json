@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "773756309489",
+    "project_id": "mera-markaz",
+    "storage_bucket": "mera-markaz.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:773756309489:android:8588ab8502d7c73615fe50",
+        "android_client_info": {
+          "package_name": "pk.pakpocket.pakpocket"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "773756309489-shpnem1u0n0eilv6b22fnmaju766nbt7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "pk.pakpocket.pakpocket",
+            "certificate_hash": "9fa55c7ab09fbc4d53c38989587d34e3ea6f8588"
+          }
+        },
+        {
+          "client_id": "773756309489-bil1d91mf3p7a7kq2cf0l1s6epvs9fcu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDt4bovH1tyXbmPxlOAOEbXlqCFNOoLhwA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "773756309489-bil1d91mf3p7a7kq2cf0l1s6epvs9fcu.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

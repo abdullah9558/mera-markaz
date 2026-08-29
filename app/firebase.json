@@ -1,0 +1,27 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "mera-markaz",
+          "appId": "1:773756309489:android:8588ab8502d7c73615fe50",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "mera-markaz",
+          "configurations": {
+            "android": "1:773756309489:android:8588ab8502d7c73615fe50"
+          }
+        }
+      }
+    }
+  },
+  "firestore": { "rules": "firestore.rules" },
+  "emulators": {
+    "firestore": { "port": 8080 },
+    "auth": { "port": 9099 },
+    "ui": { "enabled": true }
+  }
+}

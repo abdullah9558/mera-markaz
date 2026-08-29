@@ -1,0 +1,28 @@
+{
+  "name": "Mera Markaz",
+  "version": "1.0.0",
+  "build": "1",
+  "lastSynced": "2026-08-29T13:29:45.048Z",
+  "modules": [
+    "advanced",
+    "analytics",
+    "auth",
+    "electricity",
+    "expenses",
+    "fuel",
+    "home",
+    "intelligence",
+    "profile",
+    "property",
+    "recurring",
+    "savings",
+    "search",
+    "settings",
+    "solar",
+    "tax",
+    "timeline",
+    "tools",
+    "udhaar",
+    "zakat"
+  ]
+}

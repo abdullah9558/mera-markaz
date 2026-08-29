@@ -1,0 +1,28 @@
+# Flutter generated files
+app/.dart_tool/
+app/.flutter-plugins*
+app/build/
+app/android/.gradle/
+app/android/.kotlin/
+app/android/local.properties
+app/**/*.iml
+
+# Website generated files
+website/node_modules/
+website/.next/
+website/.vinext/
+website/dist/
+website/.wrangler/
+
+# Private and local files
+**/.env*
+**/key.properties
+**/*.jks
+**/*.keystore
+**/*.log
+**/*.db
+**/*.db-shm
+**/*.db-wal
+**/.idea/
+**/.DS_Store
+
