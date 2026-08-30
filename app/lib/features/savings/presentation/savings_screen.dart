@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/localization/app_localizations.dart';
+import '../../../core/theme/app_theme.dart';
 import '../data/savings_repository.dart';
 import '../domain/savings_goal.dart';
 
@@ -149,7 +150,7 @@ class _SavingsScreenState extends ConsumerState<SavingsScreen> {
                             if (goal.status == SavingsGoalStatus.completed)
                               const Icon(
                                 Icons.check_circle,
-                                color: Colors.green,
+                                color: AppColors.emerald,
                               ),
                           ],
                         ),

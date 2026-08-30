@@ -12,6 +12,7 @@ import '../../features/home/presentation/dashboard_provider.dart';
 import '../../features/fuel/domain/fuel_calculator.dart';
 import '../../features/property/domain/property_calculator.dart';
 import '../../features/solar/domain/solar_calculator.dart';
+import '../../features/settings/presentation/settings_controller.dart';
 import '../../features/tax/domain/tax_calculator.dart';
 import '../../features/zakat/domain/zakat_calculator.dart';
 
@@ -59,15 +60,105 @@ class _NumberField extends StatelessWidget {
   );
 }
 
+class _GuideItem {
+  const _GuideItem({
+    required this.title,
+    required this.body,
+    required this.icon,
+  });
+  final String title;
+  final String body;
+  final IconData icon;
+}
+
+class _CalculatorGuide extends StatelessWidget {
+  const _CalculatorGuide({required this.intro, required this.items});
+  final String intro;
+  final List<_GuideItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: colors.primaryContainer.withValues(alpha: .58),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: colors.primary.withValues(alpha: .12)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.tips_and_updates_outlined, color: colors.primary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  context.l10n.phrase(intro),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    height: 1.45,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...items.map(
+          (item) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Card(
+              margin: EdgeInsets.zero,
+              clipBehavior: Clip.antiAlias,
+              child: ExpansionTile(
+                leading: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: colors.secondaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(item.icon, color: colors.primary, size: 22),
+                ),
+                title: Text(
+                  context.l10n.phrase(item.title),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                childrenPadding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+                expandedCrossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.l10n.phrase(item.body),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      height: 1.55,
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _CalculatorPage extends StatelessWidget {
   const _CalculatorPage({
     required this.title,
+    required this.guide,
     required this.children,
     required this.onCalculate,
     this.result,
     this.note,
   });
   final String title;
+  final Widget guide;
   final List<Widget> children;
   final VoidCallback onCalculate;
   final Widget? result;
@@ -78,6 +169,21 @@ class _CalculatorPage extends StatelessWidget {
     body: ListView(
       padding: EdgeInsets.all(20),
       children: [
+        guide,
+        SizedBox(height: 8),
+        Text(
+          context.l10n.phrase('Enter your details'),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        Text(
+          context.l10n.phrase('Fields marked optional may be left empty.'),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+        SizedBox(height: 4),
         ...children.expand((widget) => [widget, SizedBox(height: 14)]),
         FilledButton.icon(
           onPressed: onCalculate,
@@ -124,7 +230,7 @@ class _ResultCard extends StatelessWidget {
               padding: EdgeInsets.symmetric(vertical: 5),
               child: Row(
                 children: [
-                  Expanded(child: Text(entry.key)),
+                  Expanded(child: Text(context.l10n.phrase(entry.key))),
                   Text(
                     entry.value,
                     style: TextStyle(fontWeight: FontWeight.w700),
@@ -190,59 +296,97 @@ class _TaxFormState extends ConsumerState<_TaxForm>
   }
 
   @override
-  Widget build(BuildContext context) => _CalculatorPage(
-    title: context.l10n.text('tax'),
-    children: [
-      if (errorBanner() case final banner?) banner,
-      _NumberField(
-        controller: salary,
-        label: context.l10n.text('monthlySalary'),
-        suffix: 'PKR',
+  Widget build(BuildContext context) {
+    final taxConfig = taxConfigFor(
+      ref.watch(settingsControllerProvider).taxYear,
+    );
+    return _CalculatorPage(
+      title: context.l10n.text('tax'),
+      guide: const _CalculatorGuide(
+        intro:
+            'Estimate salary tax and monthly take-home before planning your budget.',
+        items: [
+          _GuideItem(
+            title: 'What you need',
+            body:
+                'Your gross monthly salary and any other annual taxable income. Use amounts before tax deductions.',
+            icon: Icons.fact_check_outlined,
+          ),
+          _GuideItem(
+            title: 'How it is calculated',
+            body:
+                'Monthly salary is converted to annual taxable income and the progressive salaried-individual slabs for the selected FBR tax year are applied. For taxable income above Rs. 10 million, the calculator adds the applicable 9% surcharge on computed income tax.',
+            icon: Icons.calculate_outlined,
+          ),
+          _GuideItem(
+            title: 'Tax Year 2027 / FY 2026-27',
+            body:
+                'The selected FY 2026-27 configuration is Tax Year 2027 under FBR naming. It uses the Finance Act 2026 salaried slabs and identifies the source/version in every result.',
+            icon: Icons.calendar_month_outlined,
+          ),
+          _GuideItem(
+            title: 'Before you rely on it',
+            body:
+                'Enter taxable salary, not gross reimbursements. Exempt allowances, tax credits, employer adjustments, pension treatment, foreign income and income under other heads require their own legal treatment and may change the final return.',
+            icon: Icons.gavel_outlined,
+          ),
+        ],
       ),
-      _NumberField(
-        controller: other,
-        label: context.l10n.text('otherAnnualIncome'),
-        suffix: 'PKR',
-      ),
-    ],
-    onCalculate: () => runCalculation(
-      () => result = TaxCalculator(taxYear2025_26).calculate(
-        TaxInput(
-          monthlySalary: _parse(salary),
-          otherAnnualIncome: _parse(other),
+      children: [
+        if (errorBanner() case final banner?) banner,
+        _NumberField(
+          controller: salary,
+          label: context.l10n.text('monthlySalary'),
+          suffix: 'PKR',
+        ),
+        _NumberField(
+          controller: other,
+          label: context.l10n.text('otherAnnualIncome'),
+          suffix: 'PKR',
+        ),
+      ],
+      onCalculate: () => runCalculation(
+        () => result = TaxCalculator(taxConfig).calculate(
+          TaxInput(
+            monthlySalary: _parse(salary),
+            otherAnnualIncome: _parse(other),
+          ),
         ),
       ),
-    ),
-    result: result == null
-        ? null
-        : Column(
-            children: [
-              _ResultCard(
-                title: context.l10n.text('estimatedTax'),
-                rows: {
-                  'Annual income': _money(result!.annualIncome),
-                  'Annual tax': _money(result!.annualTax),
-                  'Monthly tax': _money(result!.monthlyTax),
-                  'Monthly take-home': _money(result!.monthlyTakeHome),
-                  'Effective rate':
-                      '${(result!.effectiveRate * 100).toStringAsFixed(2)}%',
-                },
-                metadata:
-                    'Tax Year ${result!.config.year} • ${result!.config.metadata.sourceLabel}',
-              ),
-              SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: saving ? null : _recordSalary,
-                  icon: Icon(Icons.account_balance_wallet_outlined),
-                  label: Text(saving ? 'Saving…' : 'Add salary to income'),
+      result: result == null
+          ? null
+          : Column(
+              children: [
+                _ResultCard(
+                  title: context.l10n.text('estimatedTax'),
+                  rows: {
+                    'Annual income': _money(result!.annualIncome),
+                    'Tax before surcharge': _money(result!.baseTax),
+                    if (result!.surcharge > 0)
+                      '9% high-income surcharge': _money(result!.surcharge),
+                    'Annual tax': _money(result!.annualTax),
+                    'Monthly tax': _money(result!.monthlyTax),
+                    'Monthly take-home': _money(result!.monthlyTakeHome),
+                    'Effective rate':
+                        '${(result!.effectiveRate * 100).toStringAsFixed(2)}%',
+                  },
+                  metadata:
+                      'Tax Year ${result!.config.year} • ${result!.config.metadata.sourceLabel}',
                 ),
-              ),
-            ],
-          ),
-    note: context.l10n.text('taxDisclaimer'),
-  );
+                SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: saving ? null : _recordSalary,
+                    icon: Icon(Icons.account_balance_wallet_outlined),
+                    label: Text(saving ? 'Saving…' : 'Add salary to income'),
+                  ),
+                ),
+              ],
+            ),
+      note: context.l10n.text('taxDisclaimer'),
+    );
+  }
 
   Future<void> _recordSalary() async {
     final value = result;
@@ -288,6 +432,10 @@ class _ElectricityFormState extends ConsumerState<_ElectricityForm>
   final previous = TextEditingController();
   final current = TextEditingController();
   final tax = TextEditingController(text: '18');
+  final duty = TextEditingController(text: '1.5');
+  final adjustments = TextEditingController();
+  final tvFee = TextEditingController(text: '35');
+  bool protectedConsumer = false;
   ElectricityResult? result;
   int? savedCalculationId;
   bool saving = false;
@@ -297,14 +445,57 @@ class _ElectricityFormState extends ConsumerState<_ElectricityForm>
     previous.dispose();
     current.dispose();
     tax.dispose();
+    duty.dispose();
+    adjustments.dispose();
+    tvFee.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) => _CalculatorPage(
     title: context.l10n.text('electricity'),
+    guide: const _CalculatorGuide(
+      intro:
+          'Estimate electricity usage and charges before the official bill arrives.',
+      items: [
+        _GuideItem(
+          title: 'Choose an input method',
+          body:
+              'Enter consumed units directly, or leave that field empty and provide previous and current meter readings.',
+          icon: Icons.electric_meter_outlined,
+        ),
+        _GuideItem(
+          title: 'Protected or non-protected status',
+          body:
+              'Select protected only when your bill identifies you as protected. NEPRA defines this around sustained low residential consumption; the status is determined by your billing history, not only this month’s units.',
+          icon: Icons.verified_user_outlined,
+        ),
+        _GuideItem(
+          title: 'What the estimate includes',
+          body:
+              'The calculator applies configured residential energy slabs, fixed charges and your estimated tax or adjustment percentage.',
+          icon: Icons.receipt_long_outlined,
+        ),
+        _GuideItem(
+          title: 'Why the official bill may differ',
+          body:
+              'Monthly FCA/QTA, subsidies, arrears and provider-specific adjustments are not a stable per-unit tariff. Copy their combined amount from the applicable notification or bill into the adjustment field for a closer estimate.',
+          icon: Icons.info_outline,
+        ),
+      ],
+    ),
     children: [
       if (errorBanner() case final banner?) banner,
+      SwitchListTile.adaptive(
+        value: protectedConsumer,
+        onChanged: (value) => setState(() => protectedConsumer = value),
+        title: Text(context.l10n.phrase('Protected residential consumer')),
+        subtitle: Text(
+          context.l10n.phrase(
+            'Enable only if “Protected” appears on your electricity bill.',
+          ),
+        ),
+      ),
       _NumberField(
         controller: units,
         label: context.l10n.text('unitsOptional'),
@@ -323,6 +514,21 @@ class _ElectricityFormState extends ConsumerState<_ElectricityForm>
         label: context.l10n.text('taxAdjustments'),
         suffix: '%',
       ),
+      _NumberField(
+        controller: duty,
+        label: context.l10n.phrase('Electricity duty'),
+        suffix: '%',
+      ),
+      _NumberField(
+        controller: adjustments,
+        label: context.l10n.phrase('FCA, QTA and other adjustments'),
+        suffix: 'PKR',
+      ),
+      _NumberField(
+        controller: tvFee,
+        label: context.l10n.phrase('TV fee'),
+        suffix: 'PKR',
+      ),
     ],
     onCalculate: () => runCalculation(() {
       var consumed = _parse(units);
@@ -335,8 +541,17 @@ class _ElectricityFormState extends ConsumerState<_ElectricityForm>
           );
         consumed = newValue - oldValue;
       }
-      result = ElectricityCalculator(residentialTariff2026).calculate(
-        ElectricityInput(units: consumed, taxRate: _parse(tax) / 100),
+      final tariff = protectedConsumer
+          ? protectedResidentialTariff2026
+          : residentialTariff2026;
+      result = ElectricityCalculator(tariff).calculate(
+        ElectricityInput(
+          units: consumed,
+          taxRate: _parse(tax) / 100,
+          electricityDutyRate: _parse(duty) / 100,
+          adjustments: _parse(adjustments),
+          tvFee: _parse(tvFee),
+        ),
       );
     }),
     result: result == null
@@ -347,9 +562,13 @@ class _ElectricityFormState extends ConsumerState<_ElectricityForm>
                 title: context.l10n.text('estimatedBill'),
                 rows: {
                   'Units': _number(result!.units, decimals: 1),
+                  'Tariff category': result!.config.category,
                   'Energy charges': _money(result!.energyCharges),
                   'Fixed charges': _money(result!.fixedCharges),
                   'Taxes/adjustments': _money(result!.taxes),
+                  'Electricity duty': _money(result!.electricityDuty),
+                  'FCA/QTA/other adjustments': _money(result!.adjustments),
+                  'TV fee': _money(result!.tvFee),
                   'Estimated total': _money(result!.total),
                 },
                 metadata: result!.config.metadata.sourceLabel,
@@ -407,17 +626,63 @@ class _SolarFormState extends State<_SolarForm>
     with _CalculationState<_SolarForm> {
   final units = TextEditingController();
   final roof = TextEditingController();
+  final essentialLoad = TextEditingController();
+  final backupHours = TextEditingController();
   SolarResult? result;
   @override
   void dispose() {
     units.dispose();
     roof.dispose();
+    essentialLoad.dispose();
+    backupHours.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) => _CalculatorPage(
     title: context.l10n.text('solar'),
+    guide: const _CalculatorGuide(
+      intro:
+          'Size a preliminary solar system from your electricity usage and available roof area.',
+      items: [
+        _GuideItem(
+          title: 'What you need',
+          body:
+              'Use an average monthly kWh value from recent bills and estimate the shade-free roof area available for panels.',
+          icon: Icons.fact_check_outlined,
+        ),
+        _GuideItem(
+          title: 'What you will learn',
+          body:
+              'See a suggested system size, approximate panel count, roof requirement, generation, savings and simple payback period.',
+          icon: Icons.solar_power_outlined,
+        ),
+        _GuideItem(
+          title: 'Panel quality checklist',
+          body:
+              'Prefer verifiable Tier-1 bankable manufacturers, N-type mono modules with documented IEC 61215 and IEC 61730 compliance, a traceable serial number, product warranty and linear performance warranty. Tier-1 describes manufacturer bankability, not an automatic quality guarantee.',
+          icon: Icons.solar_power_outlined,
+        ),
+        _GuideItem(
+          title: 'Inverter and protection checklist',
+          body:
+              'The inverter must support the panel string voltage/current, provide suitable MPPT inputs, anti-islanding and applicable grid protection. Ask for DC isolators, correctly rated breakers, surge protection, earthing and a licensed installer. Confirm the current DISCO and NEPRA prosumer rules before planning export.',
+          icon: Icons.electrical_services_outlined,
+        ),
+        _GuideItem(
+          title: 'Battery sizing',
+          body:
+              'Enter only essential simultaneous load and desired backup hours. The tool estimates usable energy and allows 20% reserve for a lithium battery. Lead-acid systems normally require a larger nominal bank and different depth-of-discharge assumptions.',
+          icon: Icons.battery_charging_full_outlined,
+        ),
+        _GuideItem(
+          title: 'Plan before purchasing',
+          body:
+              'Ask a qualified installer to inspect structure, shade, orientation, inverter limits, batteries and current net-metering rules.',
+          icon: Icons.engineering_outlined,
+        ),
+      ],
+    ),
     children: [
       if (errorBanner() case final banner?) banner,
       _NumberField(
@@ -430,12 +695,24 @@ class _SolarFormState extends State<_SolarForm>
         label: context.l10n.text('roofArea'),
         suffix: 'sq ft',
       ),
+      _NumberField(
+        controller: essentialLoad,
+        label: context.l10n.phrase('Essential backup load'),
+        suffix: 'kW',
+      ),
+      _NumberField(
+        controller: backupHours,
+        label: context.l10n.phrase('Required backup time'),
+        suffix: 'hours',
+      ),
     ],
     onCalculate: () => runCalculation(
       () => result = SolarCalculator(defaultSolarAssumptions).calculate(
         SolarInput(
           monthlyUnits: _parse(units),
           roofAreaSquareFeet: _parse(roof),
+          essentialLoadKw: _parse(essentialLoad),
+          backupHours: _parse(backupHours),
         ),
       ),
     ),
@@ -446,6 +723,12 @@ class _SolarFormState extends State<_SolarForm>
             rows: {
               'Recommended size': '${result!.systemKw.toStringAsFixed(2)} kW',
               'Panels (585 W)': '${result!.panelCount}',
+              'Suggested inverter':
+                  '${result!.inverterKw.toStringAsFixed(1)} kW',
+              'Usable battery energy':
+                  '${result!.usableBatteryKwh.toStringAsFixed(1)} kWh',
+              'Lithium battery bank (80% DoD)':
+                  '${result!.nominalBatteryKwh.toStringAsFixed(1)} kWh',
               'Monthly generation': '${_number(result!.monthlyGeneration)} kWh',
               'Roof required': '${_number(result!.roofAreaRequired)} sq ft',
               'Monthly savings': _money(result!.monthlySavings),
@@ -458,19 +741,26 @@ class _SolarFormState extends State<_SolarForm>
   );
 }
 
-class _PropertyForm extends StatefulWidget {
+class _PropertyForm extends ConsumerStatefulWidget {
   const _PropertyForm();
   @override
-  State<_PropertyForm> createState() => _PropertyFormState();
+  ConsumerState<_PropertyForm> createState() => _PropertyFormState();
 }
 
-class _PropertyFormState extends State<_PropertyForm>
+class _PropertyFormState extends ConsumerState<_PropertyForm>
     with _CalculationState<_PropertyForm> {
   final length = TextEditingController();
   final width = TextEditingController();
-  final marla = TextEditingController(text: '272.25');
+  late final TextEditingController marla;
   final price = TextEditingController();
   PropertyResult? result;
+  @override
+  void initState() {
+    super.initState();
+    final standard = ref.read(settingsControllerProvider).marlaSquareFeet;
+    marla = TextEditingController(text: standard.toString());
+  }
+
   @override
   void dispose() {
     length.dispose();
@@ -483,6 +773,36 @@ class _PropertyFormState extends State<_PropertyForm>
   @override
   Widget build(BuildContext context) => _CalculatorPage(
     title: context.l10n.text('property'),
+    guide: const _CalculatorGuide(
+      intro:
+          'Convert plot dimensions into the property units commonly used in Pakistan.',
+      items: [
+        _GuideItem(
+          title: 'Measure the plot',
+          body:
+              'Enter length and width in feet. This simple calculator assumes a rectangular plot.',
+          icon: Icons.straighten_outlined,
+        ),
+        _GuideItem(
+          title: 'Select the local Marla standard',
+          body:
+              'Marla size is not identical everywhere. Confirm whether your locality uses 225, 250, 272.25 or another square-foot standard.',
+          icon: Icons.location_city_outlined,
+        ),
+        _GuideItem(
+          title: 'Optional price estimate',
+          body:
+              'Enter a price per Marla to estimate total price. Registration, taxes, development charges and agent fees are not included.',
+          icon: Icons.price_check_outlined,
+        ),
+        _GuideItem(
+          title: 'Verify before buying',
+          body:
+              'This converts area only; it does not verify ownership, approved layout, zoning, road width, possession, encumbrances or buildable area. Match the Marla definition and dimensions against the allotment letter, approved map and relevant development authority record.',
+          icon: Icons.policy_outlined,
+        ),
+      ],
+    ),
     children: [
       if (errorBanner() case final banner?) banner,
       _NumberField(
@@ -494,6 +814,31 @@ class _PropertyFormState extends State<_PropertyForm>
         controller: width,
         label: context.l10n.text('width'),
         suffix: 'ft',
+      ),
+      DropdownButtonFormField<double>(
+        initialValue: const [225.0, 250.0, 272.25].contains(_parse(marla))
+            ? _parse(marla)
+            : null,
+        decoration: InputDecoration(
+          labelText: context.l10n.phrase('Common Marla standard'),
+        ),
+        items: [
+          DropdownMenuItem(
+            value: 225,
+            child: Text(context.l10n.phrase('225 sq ft — Lahore convention')),
+          ),
+          DropdownMenuItem(
+            value: 250,
+            child: Text(context.l10n.phrase('250 sq ft — some societies')),
+          ),
+          DropdownMenuItem(
+            value: 272.25,
+            child: Text(context.l10n.phrase('272.25 sq ft — ICT/traditional')),
+          ),
+        ],
+        onChanged: (value) {
+          if (value != null) setState(() => marla.text = value.toString());
+        },
       ),
       _NumberField(
         controller: marla,
@@ -526,6 +871,7 @@ class _PropertyFormState extends State<_PropertyForm>
               'Marla': _number(result!.marla, decimals: 2),
               'Kanal': _number(result!.kanal, decimals: 3),
               'Square meters': _number(result!.squareMeters, decimals: 2),
+              'Acres': _number(result!.acres, decimals: 4),
               'Estimated price': _money(result!.price),
             },
           ),
@@ -558,6 +904,30 @@ class _FuelFormState extends ConsumerState<_FuelForm>
   @override
   Widget build(BuildContext context) => _CalculatorPage(
     title: context.l10n.text('fuel'),
+    guide: const _CalculatorGuide(
+      intro:
+          'Understand vehicle fuel average, trip cost and cost per kilometre.',
+      items: [
+        _GuideItem(
+          title: 'Use the full-tank method',
+          body:
+              'For a reliable average, reset the trip meter after filling, drive normally, refill fully, then enter distance and litres added.',
+          icon: Icons.local_gas_station_outlined,
+        ),
+        _GuideItem(
+          title: 'How it is calculated',
+          body:
+              'Fuel average is distance divided by litres. Trip cost is litres multiplied by price, and cost per kilometre is total cost divided by distance.',
+          icon: Icons.calculate_outlined,
+        ),
+        _GuideItem(
+          title: 'Compare fairly',
+          body:
+              'Traffic, idling, tyre pressure, air conditioning, load and driving style affect consumption. Compare several full-tank entries.',
+          icon: Icons.speed_outlined,
+        ),
+      ],
+    ),
     children: [
       if (errorBanner() case final banner?) banner,
       _NumberField(
@@ -594,6 +964,8 @@ class _FuelFormState extends ConsumerState<_FuelForm>
                 rows: {
                   'Fuel average':
                       '${result!.averageKmPerLiter.toStringAsFixed(2)} km/L',
+                  'Consumption':
+                      '${result!.litersPer100Km.toStringAsFixed(2)} L/100 km',
                   'Fuel cost': _money(result!.tripCost),
                   'Cost per km': _money(result!.costPerKm),
                 },
@@ -648,26 +1020,162 @@ class _ZakatForm extends StatefulWidget {
 
 class _ZakatFormState extends State<_ZakatForm>
     with _CalculationState<_ZakatForm> {
-  final assets = TextEditingController();
+  final cash = TextEditingController();
+  final gold = TextEditingController();
+  final silver = TextEditingController();
+  final investments = TextEditingController();
+  final businessAssets = TextEditingController();
+  final receivables = TextEditingController();
+  final otherAssets = TextEditingController();
   final liabilities = TextEditingController();
   final nisab = TextEditingController();
+  bool isMuslim = false;
+  bool ownsAboveNisab = false;
+  bool lunarYearPassed = false;
   ZakatResult? result;
   @override
   void dispose() {
-    assets.dispose();
+    cash.dispose();
+    gold.dispose();
+    silver.dispose();
+    investments.dispose();
+    businessAssets.dispose();
+    receivables.dispose();
+    otherAssets.dispose();
     liabilities.dispose();
     nisab.dispose();
     super.dispose();
   }
 
+  Widget _conditionTile({
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool?> onChanged,
+  }) => Card(
+    margin: const EdgeInsets.only(bottom: 8),
+    child: CheckboxListTile(
+      value: value,
+      onChanged: onChanged,
+      title: Text(
+        context.l10n.phrase(title),
+        style: const TextStyle(fontWeight: FontWeight.w700),
+      ),
+      subtitle: Text(context.l10n.phrase(subtitle)),
+      controlAffinity: ListTileControlAffinity.leading,
+    ),
+  );
+
   @override
   Widget build(BuildContext context) => _CalculatorPage(
     title: context.l10n.text('zakat'),
+    guide: const _CalculatorGuide(
+      intro:
+          'Review the basic conditions, understand Nisab, and calculate 2.5% of eligible net wealth.',
+      items: [
+        _GuideItem(
+          title: 'When is Zakat applicable?',
+          body:
+              'Zakat generally applies to a Muslim whose eligible net wealth reaches Nisab and remains at or above it for one lunar year. Detailed rulings may differ, so consult a trusted scholar when unsure.',
+          icon: Icons.person_outline,
+        ),
+        _GuideItem(
+          title: 'What is Nisab?',
+          body:
+              'Nisab is the minimum wealth threshold. It is commonly based on the current market value of 87.48 grams of gold or 612.36 grams of silver. Many scholars recommend the silver threshold because it benefits more people in need.',
+          icon: Icons.monetization_on_outlined,
+        ),
+        _GuideItem(
+          title: 'What wealth is usually included?',
+          body:
+              'Cash and bank balances, gold and silver, trade inventory, eligible investments, recoverable receivables and other assets held for growth or sale are commonly included.',
+          icon: Icons.account_balance_wallet_outlined,
+        ),
+        _GuideItem(
+          title: 'What is generally excluded?',
+          body:
+              'A primary residence, normal personal vehicle, clothing, household furniture and ordinary daily-use items are generally not included. Enter only immediately deductible liabilities after confirming the applicable ruling.',
+          icon: Icons.remove_circle_outline,
+        ),
+        _GuideItem(
+          title: 'Simple rule',
+          body:
+              'If eligible assets minus deductible short-term liabilities meet the selected Nisab after one lunar year, estimated Zakat is 2.5% (1/40) of net eligible wealth.',
+          icon: Icons.calculate_outlined,
+        ),
+      ],
+    ),
     children: [
       if (errorBanner() case final banner?) banner,
+      Text(
+        context.l10n.phrase('Confirm the basic conditions'),
+        style: Theme.of(
+          context,
+        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+      ),
+      Text(
+        context.l10n.phrase(
+          'These checks help you review applicability; they are not a religious ruling.',
+        ),
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
+      _conditionTile(
+        title: 'I am Muslim',
+        subtitle: 'Zakat is an obligation for eligible Muslims.',
+        value: isMuslim,
+        onChanged: (value) => setState(() => isMuslim = value ?? false),
+      ),
+      _conditionTile(
+        title: 'My net eligible wealth reaches Nisab',
+        subtitle: 'Use the current value of the Nisab standard you follow.',
+        value: ownsAboveNisab,
+        onChanged: (value) => setState(() => ownsAboveNisab = value ?? false),
+      ),
+      _conditionTile(
+        title: 'One lunar year has passed',
+        subtitle: 'Confirm the Hawl rule that applies to your assets.',
+        value: lunarYearPassed,
+        onChanged: (value) => setState(() => lunarYearPassed = value ?? false),
+      ),
+      Text(
+        context.l10n.phrase('Your Zakatable assets'),
+        style: Theme.of(
+          context,
+        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+      ),
       _NumberField(
-        controller: assets,
-        label: context.l10n.text('eligibleAssets'),
+        controller: cash,
+        label: context.l10n.phrase('Cash in hand and bank'),
+        suffix: 'PKR',
+      ),
+      _NumberField(
+        controller: gold,
+        label: context.l10n.phrase('Gold value'),
+        suffix: 'PKR',
+      ),
+      _NumberField(
+        controller: silver,
+        label: context.l10n.phrase('Silver value'),
+        suffix: 'PKR',
+      ),
+      _NumberField(
+        controller: investments,
+        label: context.l10n.phrase('Eligible investments and shares'),
+        suffix: 'PKR',
+      ),
+      _NumberField(
+        controller: businessAssets,
+        label: context.l10n.phrase('Business inventory and trade assets'),
+        suffix: 'PKR',
+      ),
+      _NumberField(
+        controller: receivables,
+        label: context.l10n.phrase('Recoverable money owed to you'),
+        suffix: 'PKR',
+      ),
+      _NumberField(
+        controller: otherAssets,
+        label: context.l10n.phrase('Other eligible assets'),
         suffix: 'PKR',
       ),
       _NumberField(
@@ -681,15 +1189,30 @@ class _ZakatFormState extends State<_ZakatForm>
         suffix: 'PKR',
       ),
     ],
-    onCalculate: () => runCalculation(
-      () => result = ZakatCalculator().calculate(
+    onCalculate: () => runCalculation(() {
+      if (!isMuslim || !ownsAboveNisab || !lunarYearPassed) {
+        throw CalculationException(
+          context.l10n.phrase(
+            'Please review and confirm all applicable conditions before calculating.',
+          ),
+        );
+      }
+      final totalAssets =
+          _parse(cash) +
+          _parse(gold) +
+          _parse(silver) +
+          _parse(investments) +
+          _parse(businessAssets) +
+          _parse(receivables) +
+          _parse(otherAssets);
+      result = ZakatCalculator().calculate(
         ZakatInput(
-          assets: _parse(assets),
+          assets: totalAssets,
           liabilities: _parse(liabilities),
           nisab: _parse(nisab),
         ),
-      ),
-    ),
+      );
+    }),
     result: result == null
         ? null
         : _ResultCard(

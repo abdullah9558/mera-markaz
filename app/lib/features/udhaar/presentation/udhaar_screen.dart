@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../core/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../data/ledger_repository.dart';
@@ -76,7 +77,7 @@ class _UdhaarScreenState extends ConsumerState<UdhaarScreen> {
                         child: _LedgerTotal(
                           label: 'You will receive',
                           value: _ledgerMoney(summary.toReceive),
-                          color: Colors.green,
+                          color: AppColors.emerald,
                         ),
                       ),
                       SizedBox(width: 12),
@@ -147,9 +148,9 @@ class _UdhaarScreenState extends ConsumerState<UdhaarScreen> {
                           subtitle: Text(
                             [
                               if (person.toReceive > 0)
-                                'Receive ${_ledgerMoney(person.toReceive)}',
+                                '${context.l10n.phrase('Receive')} ${_ledgerMoney(person.toReceive)}',
                               if (person.toPay > 0)
-                                'Pay ${_ledgerMoney(person.toPay)}',
+                                '${context.l10n.phrase('Pay')} ${_ledgerMoney(person.toPay)}',
                             ].join(' • '),
                           ),
                           trailing: Icon(Icons.chevron_right),
@@ -487,8 +488,8 @@ class _NewLedgerSheetState extends State<_NewLedgerSheet> {
             Expanded(
               child: Text(
                 widget.person == null
-                    ? 'New ledger'
-                    : 'Add ${widget.person!.name} entry',
+                    ? context.l10n.phrase('New ledger')
+                    : '${context.l10n.phrase('Add entry for')} ${widget.person!.name}',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -581,7 +582,11 @@ class _NewLedgerSheetState extends State<_NewLedgerSheet> {
                 },
                 icon: Icon(Icons.alarm),
                 label: Text(
-                  due == null ? 'Due date' : DateFormat.yMMMd().format(due!),
+                  due == null
+                      ? context.l10n.phrase('Due date')
+                      : DateFormat.yMMMd(
+                          Localizations.localeOf(context).toLanguageTag(),
+                        ).format(due!),
                 ),
               ),
             ),
@@ -661,7 +666,7 @@ class _StatusChip extends StatelessWidget {
       LedgerStatus.overdue => 'Overdue',
     };
     final color = switch (status) {
-      LedgerStatus.paid => Colors.green,
+      LedgerStatus.paid => AppColors.emerald,
       LedgerStatus.overdue => Colors.red,
       LedgerStatus.partiallyPaid => Colors.orange,
       LedgerStatus.pending => Colors.blueGrey,

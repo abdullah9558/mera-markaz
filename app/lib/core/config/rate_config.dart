@@ -46,6 +46,7 @@ class ElectricityTariffConfig {
     required this.category,
     required this.unitRates,
     required this.fixedCharge,
+    this.fixedChargesByUnits = const {},
     required this.taxRate,
     required this.metadata,
   });
@@ -53,6 +54,7 @@ class ElectricityTariffConfig {
   final String category;
   final Map<double, double> unitRates;
   final double fixedCharge;
+  final Map<double, double> fixedChargesByUnits;
   final double taxRate;
   final RateMetadata metadata;
 }

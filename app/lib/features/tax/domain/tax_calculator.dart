@@ -10,11 +10,14 @@ class TaxInput {
 class TaxResult {
   const TaxResult({
     required this.annualIncome,
-    required this.annualTax,
+    required this.baseTax,
+    required this.surcharge,
     required this.config,
   });
   final double annualIncome;
-  final double annualTax;
+  final double baseTax;
+  final double surcharge;
+  double get annualTax => baseTax + surcharge;
   final TaxYearConfig config;
   double get monthlyTax => annualTax / 12;
   double get monthlyTakeHome => (annualIncome - annualTax) / 12;
@@ -37,7 +40,13 @@ class TaxCalculator implements Calculator<TaxInput, TaxResult> {
         break;
       }
     }
-    return TaxResult(annualIncome: income, annualTax: tax, config: config);
+    final surcharge = income > 10000000 ? tax * .09 : 0.0;
+    return TaxResult(
+      annualIncome: income,
+      baseTax: tax,
+      surcharge: surcharge,
+      config: config,
+    );
   }
 }
 
@@ -58,3 +67,26 @@ final taxYear2025_26 = TaxYearConfig(
     sourceLabel: 'FBR Finance Act 2025',
   ),
 );
+
+final taxYear2026_27 = TaxYearConfig(
+  year: '2026-27',
+  slabs: const [
+    TaxSlab(from: 0, to: 600000, baseTax: 0, rate: 0),
+    TaxSlab(from: 600000, to: 1200000, baseTax: 0, rate: .01),
+    TaxSlab(from: 1200000, to: 2200000, baseTax: 6000, rate: .11),
+    TaxSlab(from: 2200000, to: 3200000, baseTax: 116000, rate: .20),
+    TaxSlab(from: 3200000, to: 4100000, baseTax: 316000, rate: .25),
+    TaxSlab(from: 4100000, to: 5600000, baseTax: 541000, rate: .29),
+    TaxSlab(from: 5600000, to: 7000000, baseTax: 976000, rate: .32),
+    TaxSlab(from: 7000000, baseTax: 1424000, rate: .35),
+  ],
+  metadata: RateMetadata(
+    version: 'fbr-fa-2026-v1',
+    effectiveFrom: DateTime(2026, 7, 1),
+    updatedAt: DateTime(2026, 6, 30),
+    sourceLabel: 'FBR Finance Act 2026',
+  ),
+);
+
+TaxYearConfig taxConfigFor(String financialYear) =>
+    financialYear == '2025-26' ? taxYear2025_26 : taxYear2026_27;

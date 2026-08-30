@@ -269,58 +269,110 @@ Future<void> _vehicleDialog(BuildContext context, WidgetRef ref) async {
   final name = TextEditingController();
   final model = TextEditingController();
   final odometer = TextEditingController();
+  var saving = false;
+  String? error;
   final saved = await showDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: Text(context.l10n.phrase('Add vehicle')),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: name,
-              decoration: InputDecoration(
-                labelText: context.l10n.phrase('Vehicle name'),
+    builder: (dialogContext) => StatefulBuilder(
+      builder: (context, setDialogState) => AlertDialog(
+        title: Text(context.l10n.phrase('Add vehicle')),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: name,
+                textCapitalization: TextCapitalization.words,
+                decoration: InputDecoration(
+                  labelText: context.l10n.phrase('Vehicle name'),
+                  errorText: error,
+                ),
               ),
-            ),
-            TextField(
-              controller: model,
-              decoration: InputDecoration(
-                labelText: context.l10n.phrase('Make and model'),
+              TextField(
+                controller: model,
+                textCapitalization: TextCapitalization.words,
+                decoration: InputDecoration(
+                  labelText: context.l10n.phrase('Make and model'),
+                ),
               ),
-            ),
-            TextField(
-              controller: odometer,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: context.l10n.phrase('Current odometer'),
+              TextField(
+                controller: odometer,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: InputDecoration(
+                  labelText: context.l10n.phrase('Current odometer'),
+                  helperText: context.l10n.phrase(
+                    'Enter the current total reading shown on the vehicle.',
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+        actions: [
+          TextButton(
+            onPressed: saving
+                ? null
+                : () => Navigator.pop(dialogContext, false),
+            child: Text(context.l10n.phrase('Cancel')),
+          ),
+          FilledButton(
+            onPressed: saving
+                ? null
+                : () async {
+                    final parsedOdometer = double.tryParse(
+                      odometer.text.replaceAll(',', '').trim(),
+                    );
+                    if (name.text.trim().isEmpty ||
+                        parsedOdometer == null ||
+                        parsedOdometer < 0) {
+                      setDialogState(
+                        () => error = context.l10n.phrase(
+                          'Enter a vehicle name and a valid odometer.',
+                        ),
+                      );
+                      return;
+                    }
+                    setDialogState(() {
+                      saving = true;
+                      error = null;
+                    });
+                    try {
+                      await ref
+                          .read(vehicleRepositoryProvider)
+                          .saveVehicle(
+                            name: name.text,
+                            makeModel: model.text,
+                            fuelType: 'petrol',
+                            odometer: parsedOdometer,
+                          );
+                      if (dialogContext.mounted) {
+                        Navigator.pop(dialogContext, true);
+                      }
+                    } catch (_) {
+                      if (dialogContext.mounted) {
+                        setDialogState(() {
+                          saving = false;
+                          error = context.l10n.phrase(
+                            'Vehicle could not be saved. Please try again.',
+                          );
+                        });
+                      }
+                    }
+                  },
+            child: saving
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(context.l10n.phrase('Save')),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: Text(context.l10n.phrase('Cancel')),
-        ),
-        FilledButton(
-          onPressed: () async {
-            await ref
-                .read(vehicleRepositoryProvider)
-                .saveVehicle(
-                  name: name.text,
-                  makeModel: model.text,
-                  fuelType: 'petrol',
-                  odometer: double.tryParse(odometer.text) ?? 0,
-                );
-            if (context.mounted) Navigator.pop(context, true);
-          },
-          child: Text(context.l10n.phrase('Save')),
-        ),
-      ],
     ),
   );
+  await Future<void>.delayed(const Duration(milliseconds: 250));
   name.dispose();
   model.dispose();
   odometer.dispose();

@@ -59,6 +59,36 @@ void main() {
     );
   });
 
+  group('salary tax 2026-27', () {
+    final calculator = TaxCalculator(taxYear2026_27);
+
+    test('uses Finance Act 2026 upper-band breakpoints', () {
+      expect(
+        calculator
+            .calculate(const TaxInput(monthlySalary: 4100000 / 12))
+            .annualTax,
+        541000,
+      );
+      expect(
+        calculator
+            .calculate(const TaxInput(monthlySalary: 5600000 / 12))
+            .annualTax,
+        976000,
+      );
+      expect(
+        calculator
+            .calculate(const TaxInput(monthlySalary: 7000000 / 12))
+            .annualTax,
+        1424000,
+      );
+    });
+
+    test('tax-year selection resolves the matching configuration', () {
+      expect(taxConfigFor('2025-26').year, '2025-26');
+      expect(taxConfigFor('2026-27').year, '2026-27');
+    });
+  });
+
   group('electricity', () {
     final calculator = ElectricityCalculator(residentialTariff2026);
     test('slab boundary selects configured rate', () {
@@ -71,9 +101,15 @@ void main() {
       expect(at100.energyCharges, 2244);
       expect(at101.energyCharges, closeTo(2919.91, .001));
     });
-    test('tax and fixed charges are included', () {
-      final result = calculator.calculate(const ElectricityInput(units: 0));
-      expect(result.total, 354);
+    test('official slab-specific fixed charges are included', () {
+      final noUsage = calculator.calculate(
+        const ElectricityInput(units: 0, taxRate: 0),
+      );
+      final at350 = calculator.calculate(
+        const ElectricityInput(units: 350, taxRate: 0),
+      );
+      expect(noUsage.fixedCharges, 0);
+      expect(at350.fixedCharges, 200);
     });
     test('negative units and invalid percentages are rejected', () {
       expect(

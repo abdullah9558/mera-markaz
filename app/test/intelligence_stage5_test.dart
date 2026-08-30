@@ -159,5 +159,38 @@ void main() {
       final messages = await repository.messages(id);
       expect(messages.map((item) => item.role), ['user', 'assistant']);
     });
+
+    test(
+      'multiple conversations can be created, titled, searched and deleted',
+      () async {
+        final repository = AiConversationRepository(database);
+        final first = await repository.createConversation();
+        await repository.addMessage(first, 'user', 'How much did I spend?');
+        await repository.titleFromFirstMessage(first, 'How much did I spend?');
+        final second = await repository.createConversation(
+          title: 'Budget plan',
+        );
+
+        expect(await repository.conversations(), hasLength(2));
+        expect(
+          (await repository.conversations(query: 'spend')).single.id,
+          first,
+        );
+        expect(
+          (await repository.conversations(query: 'budget')).single.id,
+          second,
+        );
+
+        await repository.renameConversation(second, 'Savings plan');
+        expect(
+          (await repository.conversations(query: 'savings')).single.id,
+          second,
+        );
+
+        await repository.deleteConversation(first);
+        expect(await repository.conversations(), hasLength(1));
+        expect(await repository.messages(first), isEmpty);
+      },
+    );
   });
 }

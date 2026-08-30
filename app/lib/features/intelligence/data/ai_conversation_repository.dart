@@ -24,6 +24,42 @@ class AiConversationRepository {
   const AiConversationRepository(this._database);
   final AppDatabase _database;
 
+  Future<List<AiConversation>> conversations({String query = ''}) async {
+    final search = query.trim();
+    final rows = await _database.database.query(
+      'ai_conversations',
+      where: search.isEmpty
+          ? 'owner_id = ?'
+          : 'owner_id = ? AND title LIKE ? COLLATE NOCASE',
+      whereArgs: search.isEmpty
+          ? [_database.ownerId]
+          : [_database.ownerId, '%$search%'],
+      orderBy: 'updated_at DESC, id DESC',
+    );
+    return rows
+        .map(
+          (row) => AiConversation(
+            id: row['id'] as int,
+            title: (row['title'] as String?)?.trim().isNotEmpty == true
+                ? row['title'] as String
+                : 'New chat',
+            createdAt: DateTime.parse(row['created_at'] as String),
+            updatedAt: DateTime.parse(row['updated_at'] as String),
+          ),
+        )
+        .toList();
+  }
+
+  Future<int> createConversation({String title = 'New chat'}) async {
+    final now = DateTime.now().toIso8601String();
+    return _database.database.insert('ai_conversations', {
+      'title': title.trim().isEmpty ? 'New chat' : title.trim(),
+      'created_at': now,
+      'updated_at': now,
+      'owner_id': _database.ownerId,
+    });
+  }
+
   Future<int> currentConversation() async {
     final rows = await _database.database.query(
       'ai_conversations',
@@ -34,13 +70,39 @@ class AiConversationRepository {
       limit: 1,
     );
     if (rows.isNotEmpty) return rows.first['id'] as int;
-    final now = DateTime.now().toIso8601String();
-    return _database.database.insert('ai_conversations', {
-      'title': 'Markaz AI',
-      'created_at': now,
-      'updated_at': now,
-      'owner_id': _database.ownerId,
-    });
+    return createConversation();
+  }
+
+  Future<void> renameConversation(int id, String title) async {
+    final value = title.trim();
+    if (value.isEmpty) return;
+    await _database.database.update(
+      'ai_conversations',
+      {'title': value, 'updated_at': DateTime.now().toIso8601String()},
+      where: 'id = ? AND owner_id = ?',
+      whereArgs: [id, _database.ownerId],
+    );
+  }
+
+  Future<void> deleteConversation(int id) async {
+    await _database.database.delete(
+      'ai_conversations',
+      where: 'id = ? AND owner_id = ?',
+      whereArgs: [id, _database.ownerId],
+    );
+  }
+
+  Future<void> titleFromFirstMessage(int id, String message) async {
+    final rows = await _database.database.rawQuery(
+      'SELECT COUNT(*) AS count FROM ai_messages WHERE conversation_id = ? AND owner_id = ?',
+      [id, _database.ownerId],
+    );
+    if ((rows.first['count'] as int) != 1) return;
+    final compact = message.replaceAll(RegExp(r'\s+'), ' ').trim();
+    final title = compact.length <= 42
+        ? compact
+        : '${compact.substring(0, 39).trimRight()}...';
+    await renameConversation(id, title);
   }
 
   Future<List<AiChatMessage>> messages(int conversationId) async {

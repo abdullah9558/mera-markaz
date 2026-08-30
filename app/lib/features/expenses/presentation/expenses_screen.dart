@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/localization/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../core/theme/app_theme.dart';
 import '../data/expense_repository.dart';
 import '../domain/finance_transaction.dart';
 import '../../home/presentation/dashboard_provider.dart';
@@ -150,12 +151,12 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                           onTap: () => _open(item),
                           leading: CircleAvatar(
                             backgroundColor: income
-                                ? Colors.green.withValues(alpha: .14)
+                                ? AppColors.emerald.withValues(alpha: .14)
                                 : Theme.of(context).colorScheme.errorContainer,
                             child: Icon(
                               income ? Icons.south_west : Icons.north_east,
                               color: income
-                                  ? Colors.green.shade700
+                                  ? AppColors.emerald
                                   : Theme.of(context).colorScheme.error,
                             ),
                           ),
@@ -176,7 +177,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: income
-                                      ? Colors.green.shade700
+                                      ? AppColors.emerald
                                       : Theme.of(context).colorScheme.error,
                                 ),
                               ),
@@ -381,7 +382,11 @@ class _TransactionSheetState extends State<TransactionSheet> {
           children: [
             Expanded(
               child: Text(
-                widget.initial == null ? 'Add transaction' : 'Edit transaction',
+                context.l10n.phrase(
+                  widget.initial == null
+                      ? 'Add transaction'
+                      : 'Edit transaction',
+                ),
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),

@@ -20,6 +20,8 @@ class FuelResult {
   final double averageKmPerLiter;
   final double tripCost;
   final double costPerKm;
+  double get litersPer100Km =>
+      averageKmPerLiter <= 0 ? 0 : 100 / averageKmPerLiter;
 }
 
 class FuelCalculator implements Calculator<FuelInput, FuelResult> {

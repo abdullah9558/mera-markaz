@@ -1,5 +1,18 @@
 import 'financial_intelligence.dart';
 
+class AiConversation {
+  const AiConversation({
+    required this.id,
+    required this.title,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  final int id;
+  final String title;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+}
+
 class AiChatMessage {
   const AiChatMessage({
     required this.id,

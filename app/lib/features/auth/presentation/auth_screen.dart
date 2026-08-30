@@ -162,7 +162,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     ),
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: const Color(0xFFBCCABD),
+                      color: const Color(0xFFC7CBD6),
                       height: 1.45,
                     ),
                   ),
@@ -214,14 +214,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     Text(
                       '${context.l10n.phrase('Terms')}   •   ${context.l10n.phrase('Privacy Policy')}',
                       style: TextStyle(
-                        color: const Color(0xFFBCCABD).withValues(alpha: .7),
+                        color: const Color(0xFFC7CBD6).withValues(alpha: .7),
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       context.l10n.phrase('© 2026 Mera Markaz Inc.'),
                       style: TextStyle(
-                        color: const Color(0xFFBCCABD).withValues(alpha: .6),
+                        color: const Color(0xFFC7CBD6).withValues(alpha: .6),
                       ),
                     ),
                   ],
@@ -292,7 +292,7 @@ class _LandingCard extends StatelessWidget {
         const SizedBox(height: 26),
         Text(
           context.l10n.phrase('New to Mera Markaz?'),
-          style: const TextStyle(color: Color(0xFFBCCABD)),
+          style: const TextStyle(color: Color(0xFFC7CBD6)),
         ),
         TextButton(
           onPressed: busy ? null : onSignup,
@@ -479,7 +479,7 @@ class _GlassPanel extends StatelessWidget {
     width: double.infinity,
     padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 36),
     decoration: BoxDecoration(
-      color: const Color(0xFF192E2A).withValues(alpha: .74),
+      color: const Color(0xFF201C22).withValues(alpha: .82),
       borderRadius: BorderRadius.circular(40),
       border: Border.all(color: Colors.white.withValues(alpha: .12)),
       boxShadow: [
@@ -505,7 +505,7 @@ class _OrDivider extends StatelessWidget {
         child: Text(
           label,
           style: const TextStyle(
-            color: Color(0xFFBCCABD),
+            color: Color(0xFFC7CBD6),
             fontWeight: FontWeight.w700,
           ),
         ),

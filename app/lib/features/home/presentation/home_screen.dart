@@ -63,10 +63,10 @@ class HomeScreen extends ConsumerWidget {
     final score = ref.watch(markazScoreProvider).asData?.value;
     final insights = ref.watch(financialInsightsProvider).asData?.value;
     final profile = ref.watch(userProfileProvider).asData?.value;
-    final firstName = profile?.firstName ?? '';
-    final greeting = firstName.isEmpty
-        ? context.l10n.text('greeting')
-        : 'Assalam-o-Alaikum, $firstName!';
+    final userName = profile?.fullName.trim() ?? '';
+    final salutation = context.l10n.phrase('Assalam-o-Alaikum');
+    final hasUnreadNotifications =
+        ref.watch(notificationInboxUnreadProvider).asData?.value ?? false;
     return Scaffold(
       body: AuroraBackground(
         child: SafeArea(
@@ -74,7 +74,9 @@ class HomeScreen extends ConsumerWidget {
             slivers: [
               SliverAppBar(
                 pinned: true,
-                backgroundColor: AppColors.surface.withValues(alpha: .94),
+                backgroundColor: Theme.of(
+                  context,
+                ).colorScheme.surface.withValues(alpha: .94),
                 titleSpacing: 20,
                 title: Row(
                   children: [
@@ -89,25 +91,30 @@ class HomeScreen extends ConsumerWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            greeting,
+                            salutation,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: AppColors.emerald,
                               fontWeight: FontWeight.w800,
-                              fontSize: 20,
+                              fontSize: 14,
                             ),
                           ),
-                          Text(
-                            DateFormat.yMMMM().format(DateTime.now()),
-                            style: const TextStyle(
-                              color: Color(0xFFBCCABD),
-                              fontSize: 12,
+                          if (userName.isNotEmpty)
+                            Text(
+                              userName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
                             ),
-                          ),
                         ],
                       ),
                     ),
@@ -133,9 +140,11 @@ class HomeScreen extends ConsumerWidget {
                   ),
                   IconButton(
                     onPressed: () => showNotificationPopup(context),
-                    icon: const Badge(
+                    icon: Badge(
+                      isLabelVisible: hasUnreadNotifications,
                       smallSize: 7,
-                      child: Icon(Icons.notifications_outlined),
+                      backgroundColor: Colors.orange,
+                      child: const Icon(Icons.notifications_outlined),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -355,7 +364,7 @@ class _BalanceCard extends StatelessWidget {
       gradient: const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [Color(0xFF044237), Color(0xFF0E2320)],
+        colors: [Color(0xFF153B78), Color(0xFF12151D)],
       ),
       borderRadius: BorderRadius.circular(28),
       border: Border.all(color: Colors.white.withValues(alpha: .12)),
@@ -372,7 +381,7 @@ class _BalanceCard extends StatelessWidget {
         Text(
           context.l10n.phrase('AVAILABLE BALANCE'),
           style: const TextStyle(
-            color: Color(0xFFBCCABD),
+            color: Color(0xFFC7CBD6),
             letterSpacing: 1.4,
             fontSize: 12,
             fontWeight: FontWeight.w700,
@@ -394,7 +403,7 @@ class _BalanceCard extends StatelessWidget {
             change == 0
                 ? context.l10n.phrase('Expenses are unchanged from last month')
                 : '${change! > 0 ? '↑' : '↓'} ${(change!.abs() * 100).toStringAsFixed(0)}% ${context.l10n.phrase('expenses vs last month')}',
-            style: const TextStyle(color: Color(0xFFBCCABD), fontSize: 12),
+            style: const TextStyle(color: Color(0xFFC7CBD6), fontSize: 12),
           ),
           const SizedBox(height: 20),
         ],
@@ -457,7 +466,7 @@ class _SummaryAmount extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(label, style: const TextStyle(color: Color(0xFFBCCABD))),
+      Text(label, style: const TextStyle(color: Color(0xFFC7CBD6))),
       const SizedBox(height: 4),
       Text(
         value,
@@ -510,7 +519,7 @@ class _BudgetCard extends StatelessWidget {
                 minHeight: 9,
                 borderRadius: BorderRadius.circular(99),
                 color: exceeded ? const Color(0xFFFFB4AB) : AppColors.emerald,
-                backgroundColor: const Color(0xFF243935),
+                backgroundColor: const Color(0xFF232C3E),
               ),
             ),
             const SizedBox(height: 10),
@@ -518,7 +527,7 @@ class _BudgetCard extends StatelessWidget {
               exceeded
                   ? '${context.l10n.phrase('Budget exceeded')}: $remaining'
                   : '${context.l10n.phrase('Spent')} $spent • ${context.l10n.phrase('Remaining')} $remaining • ${(progress * 100).toStringAsFixed(0)}%',
-              style: const TextStyle(color: Color(0xFFBCCABD), fontSize: 12),
+              style: const TextStyle(color: Color(0xFFC7CBD6), fontSize: 12),
             ),
           ],
         ),
@@ -562,24 +571,30 @@ class _UdhaarCard extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
   @override
-  Widget build(BuildContext context) => Material(
-    color: AppColors.surfaceHigh.withValues(alpha: .78),
-    borderRadius: BorderRadius.circular(24),
-    child: InkWell(
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      color: Theme.of(
+        context,
+      ).colorScheme.surfaceContainerHighest.withValues(alpha: .86),
+      borderRadius: BorderRadius.circular(24),
+    ),
+    child: InteractiveTap(
       onTap: onTap,
       borderRadius: BorderRadius.circular(24),
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white.withValues(alpha: .1)),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outlineVariant,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(icon, color: color),
             const SizedBox(height: 14),
-            Text(label, style: const TextStyle(color: Color(0xFFBCCABD))),
+            Text(label, style: const TextStyle(color: Color(0xFFC7CBD6))),
             const SizedBox(height: 4),
             Text(
               value,
@@ -739,7 +754,7 @@ class _QuickAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SizedBox(
     width: 76,
-    child: InkWell(
+    child: InteractiveTap(
       onTap: onTap,
       borderRadius: BorderRadius.circular(22),
       child: Column(
@@ -748,9 +763,11 @@ class _QuickAction extends StatelessWidget {
             width: 62,
             height: 62,
             decoration: BoxDecoration(
-              color: AppColors.surfaceHigh,
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withValues(alpha: .12)),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outlineVariant,
+              ),
             ),
             child: Icon(icon, color: AppColors.emerald),
           ),
@@ -781,7 +798,7 @@ class _ToolCard extends StatelessWidget {
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) => Card(
-    child: InkWell(
+    child: InteractiveTap(
       onTap: onTap,
       borderRadius: BorderRadius.circular(28),
       child: Padding(
@@ -805,7 +822,7 @@ class _ToolCard extends StatelessWidget {
               subtitle,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Color(0xFFBCCABD), fontSize: 12),
+              style: const TextStyle(color: Color(0xFFC7CBD6), fontSize: 12),
             ),
           ],
         ),
@@ -833,7 +850,7 @@ class _UserAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) => CircleAvatar(
     radius: 20,
-    backgroundColor: AppColors.surfaceHigh,
+    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
     backgroundImage: photoUrl?.isNotEmpty == true
         ? NetworkImage(photoUrl!)
         : null,

@@ -7,6 +7,7 @@ import '../data/expense_repository.dart';
 import '../data/finance_export_service.dart';
 import '../domain/budget_analytics.dart';
 import '../domain/finance_transaction.dart';
+import '../../home/presentation/dashboard_provider.dart';
 
 class FinanceInsightsScreen extends ConsumerStatefulWidget {
   const FinanceInsightsScreen({super.key});
@@ -53,41 +54,85 @@ class _FinanceInsightsScreenState extends ConsumerState<FinanceInsightsScreen> {
     );
   }
 
-  void refresh() => setState(() => data = _load());
+  void refresh() {
+    if (!mounted) return;
+    setState(() {
+      data = _load();
+    });
+    ref.invalidate(homeDashboardProvider);
+  }
+
+  void _showError(Object error) {
+    if (!mounted) return;
+    final message = error is FormatException
+        ? error.message
+        : context.l10n.phrase('Something went wrong. Please try again.');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(context.l10n.phrase(message.toString()))),
+    );
+  }
+
   Future<void> setBudget() async {
-    final controller = TextEditingController();
+    final current = await ref
+        .read(budgetRepositoryProvider)
+        .monthly(DateTime.now());
+    if (!mounted) return;
+    var input = current?.amount.toStringAsFixed(0) ?? '';
+    String? errorText;
     final value = await showDialog<double>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.l10n.phrase('Monthly budget')),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          keyboardType: TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(
-            prefixText: 'Rs. ',
-            labelText: context.l10n.phrase('Budget amount'),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(context.l10n.phrase('Monthly budget')),
+          content: TextFormField(
+            initialValue: input,
+            autofocus: true,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            onChanged: (value) {
+              input = value;
+              if (errorText != null) setDialogState(() => errorText = null);
+            },
+            decoration: InputDecoration(
+              prefixText: 'Rs. ',
+              labelText: context.l10n.phrase('Budget amount'),
+              errorText: errorText,
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(context.l10n.phrase('Cancel')),
+            ),
+            FilledButton(
+              onPressed: () {
+                final parsed = double.tryParse(
+                  input.replaceAll(',', '').trim(),
+                );
+                if (parsed == null || !parsed.isFinite || parsed <= 0) {
+                  setDialogState(
+                    () => errorText = context.l10n.phrase(
+                      'Enter an amount greater than zero.',
+                    ),
+                  );
+                  return;
+                }
+                Navigator.pop(context, parsed);
+              },
+              child: Text(context.l10n.phrase('Save')),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(context.l10n.phrase('Cancel')),
-          ),
-          FilledButton(
-            onPressed: () =>
-                Navigator.pop(context, double.tryParse(controller.text)),
-            child: Text(context.l10n.phrase('Save')),
-          ),
-        ],
       ),
     );
-    controller.dispose();
-    if (value != null) {
-      await ref
-          .read(budgetRepositoryProvider)
-          .setMonthly(DateTime.now(), value);
-      refresh();
+    if (value != null && mounted) {
+      try {
+        await ref
+            .read(budgetRepositoryProvider)
+            .setMonthly(DateTime.now(), value);
+        refresh();
+      } catch (error) {
+        _showError(error);
+      }
     }
   }
 
@@ -95,10 +140,13 @@ class _FinanceInsightsScreenState extends ConsumerState<FinanceInsightsScreen> {
     final repository = ref.read(expenseRepositoryProvider);
     final categories = await repository.categories(TransactionType.expense);
     if (!mounted) return;
+    if (categories.isEmpty) {
+      _showError(context.l10n.phrase('Add an expense category first.'));
+      return;
+    }
     var categoryId = current?.categoryId ?? categories.firstOrNull?.id;
-    final amount = TextEditingController(
-      text: current == null ? '' : current.budget.toStringAsFixed(0),
-    );
+    var amountInput = current == null ? '' : current.budget.toStringAsFixed(0);
+    String? errorText;
     final result = await showDialog<(int, double)>(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -125,14 +173,21 @@ class _FinanceInsightsScreenState extends ConsumerState<FinanceInsightsScreen> {
                     : null,
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: amount,
+              TextFormField(
+                initialValue: amountInput,
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
+                onChanged: (value) {
+                  amountInput = value;
+                  if (errorText != null) {
+                    setDialogState(() => errorText = null);
+                  }
+                },
                 decoration: InputDecoration(
                   prefixText: 'Rs. ',
                   labelText: context.l10n.phrase('Budget amount'),
+                  errorText: errorText,
                 ),
               ),
             ],
@@ -144,10 +199,21 @@ class _FinanceInsightsScreenState extends ConsumerState<FinanceInsightsScreen> {
             ),
             FilledButton(
               onPressed: () {
-                final value = double.tryParse(amount.text.trim());
-                if (categoryId != null && value != null && value > 0) {
-                  Navigator.pop(context, (categoryId!, value));
+                final value = double.tryParse(
+                  amountInput.replaceAll(',', '').trim(),
+                );
+                if (categoryId == null ||
+                    value == null ||
+                    !value.isFinite ||
+                    value <= 0) {
+                  setDialogState(
+                    () => errorText = context.l10n.phrase(
+                      'Enter an amount greater than zero.',
+                    ),
+                  );
+                  return;
                 }
+                Navigator.pop(context, (categoryId!, value));
               },
               child: Text(context.l10n.phrase('Save')),
             ),
@@ -155,16 +221,19 @@ class _FinanceInsightsScreenState extends ConsumerState<FinanceInsightsScreen> {
         ),
       ),
     );
-    amount.dispose();
     if (result == null) return;
-    await ref
-        .read(budgetRepositoryProvider)
-        .setCategory(
-          month: DateTime.now(),
-          categoryId: result.$1,
-          amount: result.$2,
-        );
-    refresh();
+    try {
+      await ref
+          .read(budgetRepositoryProvider)
+          .setCategory(
+            month: DateTime.now(),
+            categoryId: result.$1,
+            amount: result.$2,
+          );
+      refresh();
+    } catch (error) {
+      _showError(error);
+    }
   }
 
   Future<void> configureThresholds(List<int> current) async {
@@ -207,8 +276,41 @@ class _FinanceInsightsScreenState extends ConsumerState<FinanceInsightsScreen> {
       ),
     );
     if (result == null) return;
-    await ref.read(budgetRepositoryProvider).setWarningThresholds(result);
-    refresh();
+    try {
+      await ref.read(budgetRepositoryProvider).setWarningThresholds(result);
+      refresh();
+    } catch (error) {
+      _showError(error);
+    }
+  }
+
+  Future<void> deleteCategoryBudget(CategoryBudgetStatus item) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(context.l10n.phrase('Delete budget?')),
+        content: Text(
+          '${context.l10n.phrase(item.category)} • ${money(item.budget)}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(context.l10n.phrase('Cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(context.l10n.phrase('Delete')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await ref.read(budgetRepositoryProvider).deleteCategory(item.budgetId!);
+      refresh();
+    } catch (error) {
+      _showError(error);
+    }
   }
 
   Future<void> export(bool pdf) async {
@@ -281,6 +383,32 @@ class _FinanceInsightsScreenState extends ConsumerState<FinanceInsightsScreen> {
           >(
             future: data,
             builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.error_outline_rounded, size: 42),
+                        const SizedBox(height: 12),
+                        Text(
+                          context.l10n.phrase(
+                            'Could not load budgets. Please try again.',
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 12),
+                        FilledButton.icon(
+                          onPressed: refresh,
+                          icon: const Icon(Icons.refresh),
+                          label: Text(context.l10n.phrase('Try again')),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
               if (!snapshot.hasData) {
                 return Center(child: CircularProgressIndicator());
               }
@@ -402,12 +530,9 @@ class _FinanceInsightsScreenState extends ConsumerState<FinanceInsightsScreen> {
                                   PopupMenuButton<String>(
                                     onSelected: (action) async {
                                       if (action == 'edit') {
-                                        setCategoryBudget(item);
+                                        await setCategoryBudget(item);
                                       } else {
-                                        await ref
-                                            .read(budgetRepositoryProvider)
-                                            .deleteCategory(item.budgetId!);
-                                        refresh();
+                                        await deleteCategoryBudget(item);
                                       }
                                     },
                                     itemBuilder: (_) => [

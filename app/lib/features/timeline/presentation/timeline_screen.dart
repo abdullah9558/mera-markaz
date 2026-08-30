@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/localization/app_localizations.dart';
+import '../../../core/theme/app_theme.dart';
 import '../data/timeline_repository.dart';
 import '../domain/timeline_event.dart';
 
@@ -215,7 +216,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: event.positive
-                                  ? Colors.green
+                                  ? AppColors.emerald
                                   : Theme.of(context).colorScheme.error,
                             ),
                           ),

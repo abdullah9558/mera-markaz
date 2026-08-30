@@ -10,6 +10,8 @@ final settingsControllerProvider =
 class SettingsController extends Notifier<UserSettings> {
   static const _languageKey = 'language_code';
   static const _themeKey = 'theme_mode';
+  static const _marlaKey = 'marla_square_feet';
+  static const _taxYearKey = 'tax_year';
   @override
   UserSettings build() {
     _load();
@@ -26,6 +28,8 @@ class SettingsController extends Notifier<UserSettings> {
     state = state.copyWith(
       languageCode: prefs.getString(_languageKey) ?? 'en',
       themeMode: theme,
+      marlaSquareFeet: prefs.getDouble(_marlaKey) ?? 272.25,
+      taxYear: prefs.getString(_taxYearKey) ?? '2026-27',
     );
   }
 
@@ -40,5 +44,15 @@ class SettingsController extends Notifier<UserSettings> {
       _themeKey,
       mode.name,
     );
+  }
+
+  Future<void> setMarlaSquareFeet(double value) async {
+    state = state.copyWith(marlaSquareFeet: value);
+    await (await SharedPreferences.getInstance()).setDouble(_marlaKey, value);
+  }
+
+  Future<void> setTaxYear(String value) async {
+    state = state.copyWith(taxYear: value);
+    await (await SharedPreferences.getInstance()).setString(_taxYearKey, value);
   }
 }

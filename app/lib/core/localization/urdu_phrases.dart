@@ -23,6 +23,7 @@ final urduPhrases = <String, String>{
   'Note (optional)': 'نوٹ (اختیاری)',
   'Add transaction': 'لین دین شامل کریں',
   'Edit transaction': 'لین دین میں ترمیم',
+  'Add entry for': 'اندراج شامل کریں برائے',
   'Delete transaction?': 'لین دین حذف کریں؟',
   'No transactions yet': 'ابھی کوئی لین دین نہیں',
   'Add income or an expense to begin your monthly overview.':
@@ -72,6 +73,8 @@ final urduPhrases = <String, String>{
   'Person name': 'شخص کا نام',
   'Phone (optional)': 'فون (اختیاری)',
   'Due date': 'واجب الادا تاریخ',
+  'Receive': 'وصولی',
+  'Pay': 'ادائیگی',
   'Notes (optional)': 'نوٹس (اختیاری)',
   'Save ledger': 'کھاتہ محفوظ کریں',
   'Pending': 'زیر التوا',
@@ -85,6 +88,13 @@ final urduPhrases = <String, String>{
   'MeraMarkaz Privacy Policy': 'میرا مرکز رازداری کی پالیسی',
   'MeraMarkaz Terms & Conditions': 'میرا مرکز شرائط و ضوابط',
   'Set budget': 'بجٹ مقرر کریں',
+  'Delete budget?': 'بجٹ حذف کریں؟',
+  'Enter an amount greater than zero.': 'صفر سے زیادہ رقم درج کریں۔',
+  'Add an expense category first.': 'پہلے خرچے کا زمرہ شامل کریں۔',
+  'Could not load budgets. Please try again.':
+      'بجٹ لوڈ نہیں ہو سکے۔ دوبارہ کوشش کریں۔',
+  'Something went wrong. Please try again.':
+      'کچھ غلط ہو گیا۔ دوبارہ کوشش کریں۔',
   'Expense by category': 'زمرے کے لحاظ سے خرچہ',
   'Not set': 'مقرر نہیں',
   'remaining': 'باقی',
@@ -114,6 +124,9 @@ final urduPhrases = <String, String>{
   'System': 'سسٹم',
   'Light': 'روشن',
   'Dark': 'تاریک',
+  'System default (Auto)': 'سسٹم ڈیفالٹ (خودکار)',
+  'System default follows your phone appearance automatically.':
+      'سسٹم ڈیفالٹ خودکار طور پر آپ کے فون کی ظاہری شکل کے مطابق چلتا ہے۔',
   'Local-first and private by default': 'مقامی اور بطور ڈیفالٹ نجی',
   'Data exported': 'ڈیٹا برآمد ہوگیا',
   'A complete JSON copy was saved locally:':
@@ -288,6 +301,22 @@ final urduPhrases = <String, String>{
   'PKR': 'PKR',
   '2024–25': '2024–25',
   '225 sq ft': '225 مربع فٹ',
+  'sq ft': 'مربع فٹ',
+  'Select tax year': 'ٹیکس سال منتخب کریں',
+  'Pakistan tax years run from 1 July to 30 June. Calculator rates change when a new Finance Act takes effect.':
+      'پاکستان میں ٹیکس سال یکم جولائی سے 30 جون تک ہوتا ہے۔ نئے فنانس ایکٹ کے نافذ ہونے پر کیلکولیٹر کے نرخ بدل جاتے ہیں۔',
+  'Current • FBR Finance Act 2026': 'موجودہ • ایف بی آر فنانس ایکٹ 2026',
+  'FBR Finance Act 2025': 'ایف بی آر فنانس ایکٹ 2025',
+  'Select Marla standard': 'مرلہ معیار منتخب کریں',
+  'Marla size varies by authority and housing society. Confirm it from the approved plan or property documents.':
+      'مرلے کا سائز اتھارٹی اور ہاؤسنگ سوسائٹی کے لحاظ سے مختلف ہوتا ہے۔ منظور شدہ نقشے یا جائیداد کے کاغذات سے تصدیق کریں۔',
+  'Lahore and many modern housing schemes':
+      'لاہور اور بہت سی جدید ہاؤسنگ اسکیمیں',
+  'Used by some housing societies': 'کچھ ہاؤسنگ سوسائٹیوں میں استعمال ہوتا ہے',
+  'Traditional standard and ICT': 'روایتی معیار اور اسلام آباد',
+  'Enter custom size': 'اپنا سائز درج کریں',
+  'Custom Marla size': 'اپنی مرضی کا مرلہ سائز',
+  'Square feet per Marla': 'فی مرلہ مربع فٹ',
   'Punjab': 'پنجاب',
   'Sindh': 'سندھ',
   'Khyber Pakhtunkhwa': 'خیبر پختونخوا',
@@ -327,6 +356,89 @@ final urduPhrases = <String, String>{
   'Add Income': 'آمدنی شامل کریں',
   'Ask Markaz AI': 'مرکز اے آئی سے پوچھیں',
   'Markaz AI': 'مرکز اے آئی',
+  'Send Feedback': 'رائے بھیجیں',
+  'Help us improve Mera Markaz': 'میرا مرکز کو بہتر بنانے میں مدد کریں',
+  'Share a suggestion, report a problem, or tell us what you would like to see next.':
+      'کوئی تجویز دیں، مسئلہ رپورٹ کریں یا بتائیں کہ آپ آگے کیا دیکھنا چاہتے ہیں۔',
+  'Send anonymously': 'گمنام طور پر بھیجیں',
+  'Your name and phone number will not be included.':
+      'آپ کا نام اور فون نمبر شامل نہیں کیا جائے گا۔',
+  'Name (optional)': 'نام (اختیاری)',
+  'Phone number (optional)': 'فون نمبر (اختیاری)',
+  'Your message': 'آپ کا پیغام',
+  'Describe your suggestion or the issue you experienced…':
+      'اپنی تجویز یا پیش آنے والے مسئلے کی وضاحت کریں…',
+  'Please enter at least 10 characters.': 'کم از کم 10 حروف درج کریں۔',
+  'Do not include passwords, verification codes, card details, CNIC numbers, or other sensitive information.':
+      'پاس ورڈ، تصدیقی کوڈ، کارڈ کی تفصیلات، شناختی کارڈ نمبر یا دیگر حساس معلومات شامل نہ کریں۔',
+  'Sending…': 'بھیجا جا رہا ہے…',
+  'Thank you. Your feedback has been sent.':
+      'شکریہ۔ آپ کی رائے بھیج دی گئی ہے۔',
+  'Feedback could not be sent.': 'رائے نہیں بھیجی جا سکی۔',
+  'Could not contact the feedback service. Check your internet connection and try again.':
+      'فیڈبیک سروس سے رابطہ نہیں ہو سکا۔ انٹرنیٹ کنکشن چیک کر کے دوبارہ کوشش کریں۔',
+  'Enter the current total reading shown on the vehicle.':
+      'گاڑی پر دکھائی جانے والی موجودہ کل اوڈومیٹر ریڈنگ درج کریں۔',
+  'Enter a vehicle name and a valid odometer.':
+      'گاڑی کا نام اور درست اوڈومیٹر درج کریں۔',
+  'Vehicle could not be saved. Please try again.':
+      'گاڑی محفوظ نہیں ہو سکی۔ دوبارہ کوشش کریں۔',
+  'Protected residential consumer': 'محفوظ رہائشی صارف',
+  'Enable only if “Protected” appears on your electricity bill.':
+      'صرف اسی وقت فعال کریں جب آپ کے بجلی کے بل پر “Protected” لکھا ہو۔',
+  'Protected or non-protected status': 'محفوظ یا غیر محفوظ حیثیت',
+  'Electricity duty': 'بجلی ڈیوٹی',
+  'FCA, QTA and other adjustments': 'FCA، QTA اور دیگر ایڈجسٹمنٹ',
+  'TV fee': 'ٹی وی فیس',
+  'Tariff category': 'ٹیرف کی قسم',
+  'FCA/QTA/other adjustments': 'FCA/QTA/دیگر ایڈجسٹمنٹ',
+  'Essential backup load': 'ضروری بیک اپ لوڈ',
+  'Required backup time': 'درکار بیک اپ وقت',
+  'Panel quality checklist': 'سولر پینل معیار کی فہرست',
+  'Inverter and protection checklist': 'انورٹر اور حفاظتی فہرست',
+  'Battery sizing': 'بیٹری کا سائز',
+  'Suggested inverter': 'تجویز کردہ انورٹر',
+  'Usable battery energy': 'قابل استعمال بیٹری توانائی',
+  'Lithium battery bank (80% DoD)': 'لیتھیم بیٹری بینک (80% DoD)',
+  'Panels (585 W)': 'پینلز (585 واٹ)',
+  'Common Marla standard': 'عام مرلہ معیار',
+  '225 sq ft — Lahore convention': '225 مربع فٹ — لاہور کا رواج',
+  '250 sq ft — some societies': '250 مربع فٹ — بعض ہاؤسنگ سوسائٹیز',
+  '272.25 sq ft — ICT/traditional': '272.25 مربع فٹ — اسلام آباد/روایتی',
+  'Verify before buying': 'خریدنے سے پہلے تصدیق کریں',
+  'Acres': 'ایکڑ',
+  'Consumption': 'کھپت',
+  'Tax before surcharge': 'سرچارج سے پہلے ٹیکس',
+  '9% high-income surcharge': 'زیادہ آمدنی پر 9% سرچارج',
+  'Tax Year 2027 / FY 2026-27': 'ٹیکس سال 2027 / مالی سال 2026-27',
+  'Select protected only when your bill identifies you as protected. NEPRA defines this around sustained low residential consumption; the status is determined by your billing history, not only this month’s units.':
+      'محفوظ صارف صرف تب منتخب کریں جب آپ کے بل پر یہی حیثیت درج ہو۔ NEPRA اسے مسلسل کم رہائشی کھپت کی بنیاد پر متعین کرتا ہے؛ یہ حیثیت صرف موجودہ ماہ کے یونٹس سے نہیں بلکہ بلنگ ہسٹری سے طے ہوتی ہے۔',
+  'Monthly FCA/QTA, subsidies, arrears and provider-specific adjustments are not a stable per-unit tariff. Copy their combined amount from the applicable notification or bill into the adjustment field for a closer estimate.':
+      'ماہانہ FCA/QTA، سبسڈی، بقایا جات اور کمپنی کی مخصوص ایڈجسٹمنٹ مستقل فی یونٹ ٹیرف نہیں ہیں۔ زیادہ درست تخمینے کے لیے متعلقہ نوٹیفکیشن یا بل سے ان کی مجموعی رقم ایڈجسٹمنٹ والے خانے میں درج کریں۔',
+  'Prefer verifiable Tier-1 bankable manufacturers, N-type mono modules with documented IEC 61215 and IEC 61730 compliance, a traceable serial number, product warranty and linear performance warranty. Tier-1 describes manufacturer bankability, not an automatic quality guarantee.':
+      'قابل تصدیق Tier-1 مینوفیکچرر، N-type مونو ماڈیول، IEC 61215 اور IEC 61730 کی دستاویزی تعمیل، قابل سراغ سیریل نمبر، پروڈکٹ وارنٹی اور لینیئر پرفارمنس وارنٹی کو ترجیح دیں۔ Tier-1 صرف مینوفیکچرر کی مالی اہلیت بتاتا ہے، خودکار معیار کی ضمانت نہیں۔',
+  'The inverter must support the panel string voltage/current, provide suitable MPPT inputs, anti-islanding and applicable grid protection. Ask for DC isolators, correctly rated breakers, surge protection, earthing and a licensed installer. Confirm the current DISCO and NEPRA prosumer rules before planning export.':
+      'انورٹر کو پینل اسٹرنگ کا وولٹیج اور کرنٹ، مناسب MPPT، اینٹی آئی لینڈنگ اور متعلقہ گرڈ تحفظ سپورٹ کرنا چاہیے۔ DC آئسولیٹر، درست ریٹنگ کے بریکر، سرج پروٹیکشن، ارتھنگ اور لائسنس یافتہ انسٹالر لازماً طلب کریں۔ گرڈ کو بجلی دینے سے پہلے موجودہ DISCO اور NEPRA پروزیومر قواعد کی تصدیق کریں۔',
+  'Enter only essential simultaneous load and desired backup hours. The tool estimates usable energy and allows 20% reserve for a lithium battery. Lead-acid systems normally require a larger nominal bank and different depth-of-discharge assumptions.':
+      'صرف ضروری بیک وقت لوڈ اور مطلوبہ بیک اپ گھنٹے درج کریں۔ یہ ٹول قابل استعمال توانائی کا تخمینہ لگاتا اور لیتھیم بیٹری کے لیے 20% محفوظ گنجائش رکھتا ہے۔ لیڈ ایسڈ سسٹم کے لیے عموماً بڑا بیٹری بینک اور مختلف ڈسچارج مفروضہ درکار ہوتا ہے۔',
+  'This converts area only; it does not verify ownership, approved layout, zoning, road width, possession, encumbrances or buildable area. Match the Marla definition and dimensions against the allotment letter, approved map and relevant development authority record.':
+      'یہ صرف رقبہ تبدیل کرتا ہے؛ ملکیت، منظور شدہ لے آؤٹ، زوننگ، سڑک کی چوڑائی، قبضہ، قانونی بوجھ یا قابل تعمیر رقبے کی تصدیق نہیں کرتا۔ مرلہ کی تعریف اور ابعاد کو الاٹمنٹ لیٹر، منظور شدہ نقشے اور متعلقہ ڈویلپمنٹ اتھارٹی کے ریکارڈ سے ملائیں۔',
+  'Monthly salary is converted to annual taxable income and the progressive salaried-individual slabs for the selected FBR tax year are applied. For taxable income above Rs. 10 million, the calculator adds the applicable 9% surcharge on computed income tax.':
+      'ماہانہ تنخواہ کو سالانہ قابل ٹیکس آمدنی میں تبدیل کر کے منتخب FBR ٹیکس سال کے تنخواہ دار افراد کے تدریجی سلیب لاگو کیے جاتے ہیں۔ ایک کروڑ روپے سے زائد قابل ٹیکس آمدنی پر حساب شدہ انکم ٹیکس میں متعلقہ 9% سرچارج شامل کیا جاتا ہے۔',
+  'The selected FY 2026-27 configuration is Tax Year 2027 under FBR naming. It uses the Finance Act 2026 salaried slabs and identifies the source/version in every result.':
+      'منتخب مالی سال 2026-27 کو FBR کے مطابق ٹیکس سال 2027 کہا جاتا ہے۔ اس میں فنانس ایکٹ 2026 کے تنخواہ دار سلیب استعمال ہوتے ہیں اور ہر نتیجے میں ماخذ اور ورژن درج ہوتا ہے۔',
+  'Enter taxable salary, not gross reimbursements. Exempt allowances, tax credits, employer adjustments, pension treatment, foreign income and income under other heads require their own legal treatment and may change the final return.':
+      'قابل ٹیکس تنخواہ درج کریں، مجموعی اخراجات کی واپسی نہیں۔ مستثنیٰ الاؤنس، ٹیکس کریڈٹ، آجر کی ایڈجسٹمنٹ، پنشن، غیر ملکی آمدنی اور دیگر ذرائع کی آمدنی کا الگ قانونی طریقہ ہوتا ہے اور حتمی ریٹرن بدل سکتا ہے۔',
+  'New chat': 'نئی گفتگو',
+  'Your chats': 'آپ کی گفتگوئیں',
+  'Search chats': 'گفتگو تلاش کریں',
+  'No chats found': 'کوئی گفتگو نہیں ملی',
+  'Rename chat': 'گفتگو کا نام بدلیں',
+  'Chat title': 'گفتگو کا عنوان',
+  'Delete chat': 'گفتگو حذف کریں',
+  'Delete chat?': 'گفتگو حذف کریں؟',
+  'This chat and its messages will be permanently deleted from this device.':
+      'یہ گفتگو اور اس کے پیغامات اس ڈیوائس سے مستقل طور پر حذف ہو جائیں گے۔',
   "Keep using Mera Markaz and we'll show insights as your financial history grows.":
       'میرا مرکز استعمال کرتے رہیں، مالی تاریخ بڑھنے پر ہم مفید بصیرت دکھائیں گے۔',
   'Your largest expense category this month is':
@@ -637,4 +749,103 @@ final urduPhrases = <String, String>{
   'Restore with recovery key': 'ریکوری کلید سے بحال کریں',
   'Recovery failed. Check the recovery key and try again.':
       'ریکوری ناکام ہوگئی۔ ریکوری کلید چیک کرکے دوبارہ کوشش کریں۔',
+  'Enter your details': 'اپنی تفصیلات درج کریں',
+  'Fields marked optional may be left empty.':
+      'اختیاری خانے خالی چھوڑے جا سکتے ہیں۔',
+  'What you need': 'آپ کو کیا درکار ہے',
+  'How it is calculated': 'حساب کیسے کیا جاتا ہے',
+  'Before you rely on it': 'نتیجے پر انحصار کرنے سے پہلے',
+  'Estimate salary tax and monthly take-home before planning your budget.':
+      'بجٹ بنانے سے پہلے تنخواہ ٹیکس اور ماہانہ ہاتھ میں آنے والی رقم کا تخمینہ لگائیں۔',
+  'Your gross monthly salary and any other annual taxable income. Use amounts before tax deductions.':
+      'اپنی مجموعی ماہانہ تنخواہ اور دیگر سالانہ قابل ٹیکس آمدنی درج کریں۔ ٹیکس کٹوتی سے پہلے کی رقم استعمال کریں۔',
+  'Monthly salary is converted to annual income, other taxable income is added, and the configured progressive salary-tax slabs are applied.':
+      'ماہانہ تنخواہ کو سالانہ آمدنی میں تبدیل کرکے دیگر قابل ٹیکس آمدنی شامل کی جاتی ہے اور مقررہ ٹیکس سلیب لاگو ہوتے ہیں۔',
+  'Tax rules, exemptions, credits and filer status can change the final liability. Confirm the current tax year and FBR guidance.':
+      'ٹیکس قواعد، چھوٹ، کریڈٹ اور فائلر حیثیت حتمی واجب الادا رقم بدل سکتے ہیں۔ موجودہ ٹیکس سال اور ایف بی آر رہنمائی کی تصدیق کریں۔',
+  'Estimate electricity usage and charges before the official bill arrives.':
+      'سرکاری بل آنے سے پہلے بجلی کے استعمال اور چارجز کا تخمینہ لگائیں۔',
+  'Choose an input method': 'اندراج کا طریقہ منتخب کریں',
+  'What the estimate includes': 'تخمینے میں کیا شامل ہے',
+  'Why the official bill may differ': 'سرکاری بل مختلف کیوں ہو سکتا ہے',
+  'Size a preliminary solar system from your electricity usage and available roof area.':
+      'بجلی کے استعمال اور دستیاب چھت کے مطابق ابتدائی سولر سسٹم کا سائز معلوم کریں۔',
+  'What you will learn': 'آپ کو کیا معلوم ہوگا',
+  'Plan before purchasing': 'خریداری سے پہلے منصوبہ بنائیں',
+  'Convert plot dimensions into the property units commonly used in Pakistan.':
+      'پلاٹ کی پیمائش کو پاکستان میں عام جائیداد اکائیوں میں تبدیل کریں۔',
+  'Measure the plot': 'پلاٹ کی پیمائش کریں',
+  'Select the local Marla standard': 'مقامی مرلہ معیار منتخب کریں',
+  'Optional price estimate': 'اختیاری قیمت کا تخمینہ',
+  'Understand vehicle fuel average, trip cost and cost per kilometre.':
+      'گاڑی کی فیول اوسط، سفر کی لاگت اور فی کلومیٹر خرچ سمجھیں۔',
+  'Use the full-tank method': 'فل ٹینک طریقہ استعمال کریں',
+  'Compare fairly': 'درست موازنہ کریں',
+  'Review the basic conditions, understand Nisab, and calculate 2.5% of eligible net wealth.':
+      'بنیادی شرائط دیکھیں، نصاب سمجھیں اور قابل زکوٰۃ خالص مال کا 2.5 فیصد حساب کریں۔',
+  'When is Zakat applicable?': 'زکوٰۃ کب لاگو ہوتی ہے؟',
+  'What is Nisab?': 'نصاب کیا ہے؟',
+  'What wealth is usually included?': 'عام طور پر کون سا مال شامل ہوتا ہے؟',
+  'What is generally excluded?': 'عام طور پر کیا شامل نہیں ہوتا؟',
+  'Simple rule': 'سادہ اصول',
+  'Confirm the basic conditions': 'بنیادی شرائط کی تصدیق کریں',
+  'These checks help you review applicability; they are not a religious ruling.':
+      'یہ چیکس اطلاق سمجھنے میں مدد دیتے ہیں؛ یہ شرعی فتویٰ نہیں ہیں۔',
+  'I am Muslim': 'میں مسلمان ہوں',
+  'Zakat is an obligation for eligible Muslims.':
+      'اہل مسلمانوں پر زکوٰۃ فرض ہے۔',
+  'My net eligible wealth reaches Nisab':
+      'میرا خالص قابل زکوٰۃ مال نصاب تک پہنچتا ہے',
+  'Use the current value of the Nisab standard you follow.':
+      'جس نصاب معیار پر آپ عمل کرتے ہیں اس کی موجودہ قیمت استعمال کریں۔',
+  'One lunar year has passed': 'ایک قمری سال گزر چکا ہے',
+  'Confirm the Hawl rule that applies to your assets.':
+      'اپنے اثاثوں پر لاگو حول کے حکم کی تصدیق کریں۔',
+  'Your Zakatable assets': 'آپ کے قابل زکوٰۃ اثاثے',
+  'Cash in hand and bank': 'نقد اور بینک بیلنس',
+  'Gold value': 'سونے کی قیمت',
+  'Silver value': 'چاندی کی قیمت',
+  'Eligible investments and shares': 'قابل زکوٰۃ سرمایہ کاری اور حصص',
+  'Business inventory and trade assets': 'کاروباری اسٹاک اور تجارتی اثاثے',
+  'Recoverable money owed to you': 'قابل وصول رقم',
+  'Other eligible assets': 'دیگر قابل زکوٰۃ اثاثے',
+  'Please review and confirm all applicable conditions before calculating.':
+      'حساب سے پہلے تمام قابل اطلاق شرائط دیکھ کر تصدیق کریں۔',
+  'Enter consumed units directly, or leave that field empty and provide previous and current meter readings.':
+      'استعمال شدہ یونٹس براہ راست درج کریں، یا یہ خانہ خالی چھوڑ کر پچھلی اور موجودہ میٹر ریڈنگ درج کریں۔',
+  'The calculator applies configured residential energy slabs, fixed charges and your estimated tax or adjustment percentage.':
+      'کیلکولیٹر مقررہ رہائشی یونٹ سلیب، فکسڈ چارجز اور آپ کے تخمینی ٹیکس یا ایڈجسٹمنٹ فیصد کو لاگو کرتا ہے۔',
+  'Provider tariff, protected status, FCA, QTA, duties, arrears, subsidies and meter dates can change the final bill.':
+      'فراہم کنندہ کے نرخ، پروٹیکٹڈ حیثیت، ایف سی اے، کیو ٹی اے، ڈیوٹیز، بقایا جات، سبسڈی اور میٹر تاریخیں حتمی بل بدل سکتی ہیں۔',
+  'Use an average monthly kWh value from recent bills and estimate the shade-free roof area available for panels.':
+      'حالیہ بلوں سے اوسط ماہانہ کلوواٹ آور لیں اور پینلز کے لیے سایہ سے پاک چھت کے رقبے کا اندازہ لگائیں۔',
+  'See a suggested system size, approximate panel count, roof requirement, generation, savings and simple payback period.':
+      'تجویز کردہ سسٹم سائز، اندازاً پینل تعداد، درکار چھت، پیداوار، بچت اور واپسی کی مدت دیکھیں۔',
+  'Ask a qualified installer to inspect structure, shade, orientation, inverter limits, batteries and current net-metering rules.':
+      'ماہر انسٹالر سے عمارت، سایہ، سمت، انورٹر حدود، بیٹریوں اور موجودہ نیٹ میٹرنگ قواعد کی جانچ کروائیں۔',
+  'Enter length and width in feet. This simple calculator assumes a rectangular plot.':
+      'لمبائی اور چوڑائی فٹ میں درج کریں۔ یہ سادہ کیلکولیٹر مستطیل پلاٹ فرض کرتا ہے۔',
+  'Marla size is not identical everywhere. Confirm whether your locality uses 225, 250, 272.25 or another square-foot standard.':
+      'مرلہ کا سائز ہر جگہ یکساں نہیں۔ تصدیق کریں کہ آپ کے علاقے میں 225، 250، 272.25 یا کوئی اور مربع فٹ معیار ہے۔',
+  'Enter a price per Marla to estimate total price. Registration, taxes, development charges and agent fees are not included.':
+      'کل قیمت کے تخمینے کے لیے فی مرلہ قیمت درج کریں۔ رجسٹریشن، ٹیکس، ترقیاتی چارجز اور ایجنٹ فیس شامل نہیں۔',
+  'For a reliable average, reset the trip meter after filling, drive normally, refill fully, then enter distance and litres added.':
+      'درست اوسط کے لیے ٹینک بھرنے کے بعد ٹرپ میٹر ری سیٹ کریں، معمول کے مطابق چلائیں، دوبارہ مکمل ٹینک بھریں اور فاصلہ و لیٹر درج کریں۔',
+  'Fuel average is distance divided by litres. Trip cost is litres multiplied by price, and cost per kilometre is total cost divided by distance.':
+      'فیول اوسط فاصلہ تقسیم لیٹر ہے۔ سفر کی لاگت لیٹر ضرب قیمت اور فی کلومیٹر خرچ کل لاگت تقسیم فاصلہ ہے۔',
+  'Traffic, idling, tyre pressure, air conditioning, load and driving style affect consumption. Compare several full-tank entries.':
+      'ٹریفک، گاڑی کا کھڑا چلنا، ٹائر پریشر، اے سی، وزن اور ڈرائیونگ انداز ایندھن پر اثر ڈالتے ہیں۔ کئی فل ٹینک اندراجات کا موازنہ کریں۔',
+  'Zakat generally applies to a Muslim whose eligible net wealth reaches Nisab and remains at or above it for one lunar year. Detailed rulings may differ, so consult a trusted scholar when unsure.':
+      'زکوٰۃ عام طور پر اس مسلمان پر لاگو ہوتی ہے جس کا خالص قابل زکوٰۃ مال نصاب تک پہنچے اور ایک قمری سال تک برقرار رہے۔ تفصیلی احکام مختلف ہو سکتے ہیں، اس لیے شک کی صورت میں معتبر عالم سے رجوع کریں۔',
+  'Nisab is the minimum wealth threshold. It is commonly based on the current market value of 87.48 grams of gold or 612.36 grams of silver. Many scholars recommend the silver threshold because it benefits more people in need.':
+      'نصاب مال کی کم از کم حد ہے۔ عام طور پر یہ 87.48 گرام سونے یا 612.36 گرام چاندی کی موجودہ قیمت پر مبنی ہوتا ہے۔ بہت سے علماء زیادہ ضرورت مندوں کے فائدے کے لیے چاندی کے نصاب کی سفارش کرتے ہیں۔',
+  'Cash and bank balances, gold and silver, trade inventory, eligible investments, recoverable receivables and other assets held for growth or sale are commonly included.':
+      'نقد و بینک بیلنس، سونا چاندی، تجارتی اسٹاک، قابل زکوٰۃ سرمایہ کاری، قابل وصول رقم اور بڑھوتری یا فروخت کے لیے رکھے اثاثے عام طور پر شامل ہوتے ہیں۔',
+  'A primary residence, normal personal vehicle, clothing, household furniture and ordinary daily-use items are generally not included. Enter only immediately deductible liabilities after confirming the applicable ruling.':
+      'بنیادی رہائش، عام ذاتی گاڑی، کپڑے، گھریلو فرنیچر اور روزمرہ استعمال کی اشیاء عموماً شامل نہیں ہوتیں۔ قابل اطلاق حکم کی تصدیق کے بعد صرف فوری قابل کٹوتی واجبات درج کریں۔',
+  'If eligible assets minus deductible short-term liabilities meet the selected Nisab after one lunar year, estimated Zakat is 2.5% (1/40) of net eligible wealth.':
+      'اگر قابل زکوٰۃ اثاثے منفی قابل کٹوتی قلیل مدتی واجبات ایک قمری سال بعد منتخب نصاب تک پہنچیں تو تخمینی زکوٰۃ خالص مال کا 2.5 فیصد یعنی چالیسواں حصہ ہے۔',
+  'Assalam-o-Alaikum': 'السلام علیکم',
+  'Press back again to exit the app':
+      'ایپ بند کرنے کے لیے دوبارہ بیک بٹن دبائیں',
 };

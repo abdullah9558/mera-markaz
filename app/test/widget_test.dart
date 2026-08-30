@@ -55,7 +55,7 @@ void main() {
 
   testWidgets('home remains useful with no financial records', (tester) async {
     await pumpApp(tester);
-    expect(find.text('Assalam-o-Alaikum 👋'), findsOneWidget);
+    expect(find.text('Assalam-o-Alaikum'), findsOneWidget);
     expect(find.text('Rs. 0'), findsWidgets);
     expect(find.text('Quick actions'), findsOneWidget);
   });
@@ -66,9 +66,9 @@ void main() {
       'offline_guest_session': true,
     });
     await pumpApp(tester);
-    expect(find.text('السلام علیکم 👋'), findsOneWidget);
+    expect(find.text('السلام علیکم'), findsOneWidget);
     expect(
-      Directionality.of(tester.element(find.text('السلام علیکم 👋'))),
+      Directionality.of(tester.element(find.text('السلام علیکم'))),
       TextDirection.rtl,
     );
   });
@@ -87,7 +87,20 @@ void main() {
     final fields = find.byType(TextFormField);
     expect(fields, findsNWidgets(2));
     await tester.enterText(fields.first, '100000');
-    await tester.tap(find.widgetWithText(FilledButton, 'Calculate'));
+    for (var index = 0; index < 4; index++) {
+      await tester.drag(find.byType(ListView), const Offset(0, -450));
+      await tester.pumpAndSettle();
+      if (find
+          .widgetWithText(FilledButton, 'Calculate')
+          .evaluate()
+          .isNotEmpty) {
+        break;
+      }
+    }
+    final calculateButton = find.widgetWithText(FilledButton, 'Calculate');
+    await tester.ensureVisible(calculateButton);
+    await tester.pumpAndSettle();
+    await tester.tap(calculateButton);
     await tester.pumpAndSettle();
     expect(find.text('Estimated tax'), findsOneWidget);
     expect(find.text('Rs. 6,000'), findsWidgets);
@@ -109,7 +122,7 @@ void main() {
     await tester.ensureVisible(offlineButton);
     await tester.tap(offlineButton);
     await tester.pumpAndSettle();
-    expect(find.text('Assalam-o-Alaikum 👋'), findsOneWidget);
+    expect(find.text('Assalam-o-Alaikum'), findsOneWidget);
   });
 
   testWidgets('authentication screen is localized in Urdu', (tester) async {

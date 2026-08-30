@@ -170,7 +170,9 @@ class _EncryptionSetupScreenState extends ConsumerState<EncryptionSetupScreen> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceContainer,
+                  color: Theme.of(
+                    dialogContext,
+                  ).colorScheme.surfaceContainerHigh,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: SelectableText(

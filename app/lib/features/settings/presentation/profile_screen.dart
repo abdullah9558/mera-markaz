@@ -15,6 +15,7 @@ import 'encryption_setup_screen.dart';
 import 'authorized_devices_screen.dart';
 import 'privacy_data_screen.dart';
 import 'settings_controller.dart';
+import 'feedback_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -82,10 +83,243 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     });
   }
 
+  String _themeLabel(BuildContext context, ThemeMode mode) => switch (mode) {
+    ThemeMode.system => context.l10n.phrase('System default (Auto)'),
+    ThemeMode.light => context.l10n.phrase('Light'),
+    ThemeMode.dark => context.l10n.phrase('Dark'),
+  };
+
+  Future<void> _showAppearancePicker(ThemeMode current) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      builder: (sheetContext) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              sheetContext.l10n.phrase('Appearance'),
+              style: Theme.of(
+                sheetContext,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              sheetContext.l10n.phrase(
+                'System default follows your phone appearance automatically.',
+              ),
+            ),
+            const SizedBox(height: 18),
+            for (final option in [
+              (ThemeMode.system, Icons.brightness_auto_rounded),
+              (ThemeMode.light, Icons.light_mode_rounded),
+              (ThemeMode.dark, Icons.dark_mode_rounded),
+            ])
+              Card(
+                child: ListTile(
+                  onTap: () async {
+                    await ref
+                        .read(settingsControllerProvider.notifier)
+                        .setTheme(option.$1);
+                    if (sheetContext.mounted) Navigator.pop(sheetContext);
+                  },
+                  leading: Icon(option.$2),
+                  title: Text(_themeLabel(sheetContext, option.$1)),
+                  trailing: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 180),
+                    child: current == option.$1
+                        ? const Icon(
+                            Icons.check_circle_rounded,
+                            key: ValueKey(true),
+                            color: AppColors.emerald,
+                          )
+                        : const Icon(
+                            Icons.circle_outlined,
+                            key: ValueKey(false),
+                          ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _taxYearLabel(String financialYear) {
+    final endYear = financialYear.split('-').last;
+    return 'FY $financialYear / TY 20$endYear';
+  }
+
+  String _marlaLabel(BuildContext context, double value) {
+    final number = value == value.roundToDouble()
+        ? value.toInt().toString()
+        : value.toStringAsFixed(2);
+    return '$number ${context.l10n.phrase('sq ft')}';
+  }
+
+  Future<void> _showTaxYearPicker(String current) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      builder: (sheetContext) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              sheetContext.l10n.phrase('Select tax year'),
+              style: Theme.of(
+                sheetContext,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              sheetContext.l10n.phrase(
+                'Pakistan tax years run from 1 July to 30 June. Calculator rates change when a new Finance Act takes effect.',
+              ),
+            ),
+            const SizedBox(height: 18),
+            for (final year in ['2026-27', '2025-26'])
+              Card(
+                child: ListTile(
+                  onTap: () async {
+                    await ref
+                        .read(settingsControllerProvider.notifier)
+                        .setTaxYear(year);
+                    if (sheetContext.mounted) Navigator.pop(sheetContext);
+                  },
+                  leading: const Icon(Icons.calendar_month_outlined),
+                  title: Text(_taxYearLabel(year)),
+                  subtitle: Text(
+                    year == '2026-27'
+                        ? sheetContext.l10n.phrase(
+                            'Current • FBR Finance Act 2026',
+                          )
+                        : sheetContext.l10n.phrase('FBR Finance Act 2025'),
+                  ),
+                  trailing: Icon(
+                    current == year
+                        ? Icons.check_circle_rounded
+                        : Icons.circle_outlined,
+                    color: current == year ? AppColors.emerald : null,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showMarlaPicker(double current) async {
+    final selected = await showModalBottomSheet<double?>(
+      context: context,
+      useSafeArea: true,
+      builder: (sheetContext) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              sheetContext.l10n.phrase('Select Marla standard'),
+              style: Theme.of(
+                sheetContext,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              sheetContext.l10n.phrase(
+                'Marla size varies by authority and housing society. Confirm it from the approved plan or property documents.',
+              ),
+            ),
+            const SizedBox(height: 18),
+            for (final option in [
+              (225.0, 'Lahore and many modern housing schemes'),
+              (250.0, 'Used by some housing societies'),
+              (272.25, 'Traditional standard and ICT'),
+            ])
+              Card(
+                child: ListTile(
+                  onTap: () => Navigator.pop(sheetContext, option.$1),
+                  leading: const Icon(Icons.square_foot_rounded),
+                  title: Text(_marlaLabel(sheetContext, option.$1)),
+                  subtitle: Text(sheetContext.l10n.phrase(option.$2)),
+                  trailing: Icon(
+                    (current - option.$1).abs() < .001
+                        ? Icons.check_circle_rounded
+                        : Icons.circle_outlined,
+                    color: (current - option.$1).abs() < .001
+                        ? AppColors.emerald
+                        : null,
+                  ),
+                ),
+              ),
+            TextButton.icon(
+              onPressed: () => Navigator.pop(sheetContext, -1),
+              icon: const Icon(Icons.edit_outlined),
+              label: Text(sheetContext.l10n.phrase('Enter custom size')),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || selected == null) return;
+    if (selected > 0) {
+      await ref
+          .read(settingsControllerProvider.notifier)
+          .setMarlaSquareFeet(selected);
+      return;
+    }
+    final controller = TextEditingController(text: current.toString());
+    final custom = await showDialog<double>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(dialogContext.l10n.phrase('Custom Marla size')),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            labelText: dialogContext.l10n.phrase('Square feet per Marla'),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(dialogContext.l10n.phrase('Cancel')),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = double.tryParse(controller.text.trim());
+              if (value != null && value > 0) {
+                Navigator.pop(dialogContext, value);
+              }
+            },
+            child: Text(dialogContext.l10n.phrase('Save')),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (custom != null) {
+      await ref
+          .read(settingsControllerProvider.notifier)
+          .setMarlaSquareFeet(custom);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final profile = ref.watch(userProfileProvider).asData?.value;
     final isGuest = ref.watch(authControllerProvider).user?.isGuest == true;
+    final hasUnreadNotifications =
+        ref.watch(notificationInboxUnreadProvider).asData?.value ?? false;
+    final settings = ref.watch(settingsControllerProvider);
     return Scaffold(
       body: AuroraBackground(
         child: SafeArea(
@@ -93,28 +327,38 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             slivers: [
               SliverAppBar(
                 pinned: true,
-                backgroundColor: AppColors.surface.withValues(alpha: .94),
+                backgroundColor: Theme.of(
+                  context,
+                ).colorScheme.surface.withValues(alpha: .94),
                 title: Row(
                   children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceHigh,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: .12),
-                        ),
-                      ),
-                      child: const Icon(Icons.person_outline),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      context.l10n.text('greeting'),
-                      style: const TextStyle(
-                        color: AppColors.emerald,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 20,
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            context.l10n.phrase('Assalam-o-Alaikum'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppColors.emerald,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 14,
+                            ),
+                          ),
+                          if (profile?.fullName.trim().isNotEmpty == true)
+                            Text(
+                              profile!.fullName.trim(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ],
@@ -122,7 +366,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 actions: [
                   IconButton(
                     onPressed: () => showNotificationPopup(context),
-                    icon: const Icon(Icons.notifications_outlined),
+                    icon: Badge(
+                      isLabelVisible: hasUnreadNotifications,
+                      smallSize: 7,
+                      backgroundColor: Colors.orange,
+                      child: const Icon(Icons.notifications_outlined),
+                    ),
                   ),
                   const SizedBox(width: 10),
                 ],
@@ -177,6 +426,26 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 .setLanguage(value),
                           ),
                         ),
+                        _SettingsTile(
+                          icon: Icons.palette_outlined,
+                          label: context.l10n.phrase('Appearance'),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _themeLabel(context, settings.themeMode),
+                                style: const TextStyle(
+                                  color: AppColors.emerald,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.chevron_right),
+                            ],
+                          ),
+                          onTap: () =>
+                              _showAppearancePicker(settings.themeMode),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 20),
@@ -197,12 +466,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         _SettingsTile(
                           icon: Icons.calendar_month_outlined,
                           label: context.l10n.phrase('Tax Year'),
-                          trailing: Text(context.l10n.phrase('2024–25')),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(_taxYearLabel(settings.taxYear)),
+                              const Icon(Icons.chevron_right),
+                            ],
+                          ),
+                          onTap: () => _showTaxYearPicker(settings.taxYear),
                         ),
                         _SettingsTile(
                           icon: Icons.square_foot,
                           label: context.l10n.phrase('Marla Standard'),
-                          trailing: Text(context.l10n.phrase('225 sq ft')),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _marlaLabel(context, settings.marlaSquareFeet),
+                              ),
+                              const Icon(Icons.chevron_right),
+                            ],
+                          ),
+                          onTap: () =>
+                              _showMarlaPicker(settings.marlaSquareFeet),
                         ),
                       ],
                     ),
@@ -261,6 +547,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     _SettingsCard(
                       title: context.l10n.phrase('SUPPORT & DATA'),
                       children: [
+                        _SettingsTile(
+                          icon: Icons.feedback_outlined,
+                          label: context.l10n.phrase('Send Feedback'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const FeedbackScreen(),
+                            ),
+                          ),
+                        ),
                         _SettingsTile(
                           icon: Icons.star_outline,
                           label: context.l10n.phrase('Rate App'),
@@ -325,9 +622,11 @@ class _ProfileHero extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(24, 30, 24, 28),
       decoration: BoxDecoration(
-        color: AppColors.surfaceHigh.withValues(alpha: .86),
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: .90),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: Colors.white.withValues(alpha: .14)),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Column(
         children: [
@@ -336,7 +635,9 @@ class _ProfileHero extends StatelessWidget {
             borderRadius: BorderRadius.circular(99),
             child: CircleAvatar(
               radius: 54,
-              backgroundColor: AppColors.surfaceContainer,
+              backgroundColor: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHigh,
               backgroundImage: profile?.photoUrl?.isNotEmpty == true
                   ? NetworkImage(profile!.photoUrl!)
                   : null,
@@ -370,12 +671,15 @@ class _SettingsCard extends StatelessWidget {
   final String title;
   final List<Widget> children;
   @override
-  Widget build(BuildContext context) => Container(
-    decoration: BoxDecoration(
-      color: AppColors.surfaceHigh.withValues(alpha: .86),
+  Widget build(BuildContext context) => Material(
+    color: Theme.of(
+      context,
+    ).colorScheme.surfaceContainerHighest.withValues(alpha: .90),
+    shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(28),
-      border: Border.all(color: Colors.white.withValues(alpha: .13)),
+      side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
     ),
+    clipBehavior: Clip.antiAlias,
     child: Column(
       children: [
         Align(
@@ -434,7 +738,7 @@ class _LanguageSwitch extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(3),
     decoration: BoxDecoration(
-      color: const Color(0xFF0A1F1C),
+      color: Theme.of(context).colorScheme.surfaceContainer,
       borderRadius: BorderRadius.circular(14),
     ),
     child: Row(
@@ -471,13 +775,17 @@ class _LanguageOption extends StatelessWidget {
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: selected ? AppColors.surfaceHigh : Colors.transparent,
+        color: selected
+            ? Theme.of(context).colorScheme.surfaceContainerHighest
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(11),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: selected ? AppColors.emerald : const Color(0xFFBCCABD),
+          color: selected
+              ? AppColors.emerald
+              : Theme.of(context).colorScheme.onSurfaceVariant,
           fontWeight: FontWeight.w800,
         ),
       ),
@@ -491,7 +799,9 @@ class _GuestAccountCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
-      color: AppColors.surfaceHigh.withValues(alpha: .86),
+      color: Theme.of(
+        context,
+      ).colorScheme.surfaceContainerHighest.withValues(alpha: .90),
       borderRadius: BorderRadius.circular(28),
       border: Border.all(color: AppColors.emerald.withValues(alpha: .35)),
     ),
@@ -507,7 +817,7 @@ class _GuestAccountCard extends StatelessWidget {
           context.l10n.phrase(
             'Create an account to keep your current activity. Sign in to an existing account to discard this temporary activity and restore that account.',
           ),
-          style: const TextStyle(color: Color(0xFFBCCABD)),
+          style: const TextStyle(color: Color(0xFFC7CBD6)),
         ),
         const SizedBox(height: 16),
         FilledButton(

@@ -6,7 +6,14 @@ import { fileURLToPath } from 'node:url';
 const siteRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const appRoot = process.env.MERA_MARKAZ_APP_DIR || path.resolve(siteRoot, '..', 'app');
 const pubspecPath = path.join(appRoot, 'pubspec.yaml');
-if (!existsSync(pubspecPath)) throw new Error(`Mera Markaz app not found at ${appRoot}. Set MERA_MARKAZ_APP_DIR to its folder.`);
+if (!existsSync(pubspecPath)) {
+  const synchronizedContent = path.join(siteRoot, 'content', 'app-data.json');
+  if (!existsSync(synchronizedContent)) {
+    throw new Error(`Mera Markaz app not found at ${appRoot}, and no synchronized website content is available.`);
+  }
+  console.log('Flutter source is unavailable in this deployment; using committed synchronized app content.');
+  process.exit(0);
+}
 
 const pubspec = await readFile(pubspecPath, 'utf8');
 const versionMatch = pubspec.match(/^version:\s*([^+\s]+)(?:\+(\S+))?/m);

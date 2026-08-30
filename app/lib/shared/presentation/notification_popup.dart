@@ -7,6 +7,20 @@ import '../../core/database/app_database.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/theme/app_theme.dart';
 
+const _notificationReadAtKey = 'notification_inbox_read_at';
+
+final notificationInboxUnreadProvider = FutureProvider<bool>((ref) async {
+  final database = ref.watch(appDatabaseProvider);
+  final preferences = await SharedPreferences.getInstance();
+  final readAtValue = preferences.getString(_notificationReadAtKey);
+  if (readAtValue == null) return true;
+  final unread = await database.database.rawQuery(
+    "SELECT COUNT(*) count FROM reminders WHERE owner_id = ? AND status = 'pending' AND created_at > ?",
+    [database.ownerId, readAtValue],
+  );
+  return (unread.first['count'] as int? ?? 0) > 0;
+});
+
 Future<void> showNotificationPopup(BuildContext context) => showDialog<void>(
   context: context,
   barrierDismissible: true,
@@ -21,7 +35,6 @@ class _NotificationPopup extends ConsumerStatefulWidget {
 }
 
 class _NotificationPopupState extends ConsumerState<_NotificationPopup> {
-  static const _readKey = 'notification_inbox_all_read';
   bool _allRead = false;
   List<Map<String, Object?>> _reminders = const [];
 
@@ -33,8 +46,7 @@ class _NotificationPopupState extends ConsumerState<_NotificationPopup> {
 
   Future<void> _load() async {
     final database = ref.read(appDatabaseProvider);
-    final value =
-        (await SharedPreferences.getInstance()).getBool(_readKey) ?? false;
+    final hasUnread = await ref.read(notificationInboxUnreadProvider.future);
     final reminders = await database.database.query(
       'reminders',
       where: "owner_id = ? AND status = 'pending'",
@@ -44,14 +56,18 @@ class _NotificationPopupState extends ConsumerState<_NotificationPopup> {
     );
     if (mounted) {
       setState(() {
-        _allRead = value;
+        _allRead = !hasUnread;
         _reminders = reminders;
       });
     }
   }
 
   Future<void> _markAllRead() async {
-    await (await SharedPreferences.getInstance()).setBool(_readKey, true);
+    await (await SharedPreferences.getInstance()).setString(
+      _notificationReadAtKey,
+      DateTime.now().toIso8601String(),
+    );
+    ref.invalidate(notificationInboxUnreadProvider);
     if (mounted) setState(() => _allRead = true);
   }
 
@@ -84,10 +100,10 @@ class _NotificationPopupState extends ConsumerState<_NotificationPopup> {
     return Dialog(
       alignment: Alignment.topCenter,
       insetPadding: const EdgeInsets.fromLTRB(18, 70, 18, 24),
-      backgroundColor: AppColors.surfaceHigh,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(28),
-        side: BorderSide(color: Colors.white.withValues(alpha: .14)),
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 520),
