@@ -1,24 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../core/database/app_database.dart';
 import '../../core/localization/app_localizations.dart';
+import '../../core/notifications/notification_inbox_repository.dart';
 import '../../core/theme/app_theme.dart';
 
-const _notificationReadAtKey = 'notification_inbox_read_at';
-
 final notificationInboxUnreadProvider = FutureProvider<bool>((ref) async {
-  final database = ref.watch(appDatabaseProvider);
-  final preferences = await SharedPreferences.getInstance();
-  final readAtValue = preferences.getString(_notificationReadAtKey);
-  if (readAtValue == null) return true;
-  final unread = await database.database.rawQuery(
-    "SELECT COUNT(*) count FROM reminders WHERE owner_id = ? AND status = 'pending' AND created_at > ?",
-    [database.ownerId, readAtValue],
-  );
-  return (unread.first['count'] as int? ?? 0) > 0;
+  return await ref.watch(notificationInboxRepositoryProvider).unreadCount() > 0;
 });
 
 Future<void> showNotificationPopup(BuildContext context) => showDialog<void>(
@@ -35,8 +24,7 @@ class _NotificationPopup extends ConsumerStatefulWidget {
 }
 
 class _NotificationPopupState extends ConsumerState<_NotificationPopup> {
-  bool _allRead = false;
-  List<Map<String, Object?>> _reminders = const [];
+  List<InboxNotification>? _notifications;
 
   @override
   void initState() {
@@ -45,58 +33,24 @@ class _NotificationPopupState extends ConsumerState<_NotificationPopup> {
   }
 
   Future<void> _load() async {
-    final database = ref.read(appDatabaseProvider);
-    final hasUnread = await ref.read(notificationInboxUnreadProvider.future);
-    final reminders = await database.database.query(
-      'reminders',
-      where: "owner_id = ? AND status = 'pending'",
-      whereArgs: [database.ownerId],
-      orderBy: 'scheduled_at',
-      limit: 10,
-    );
+    final notifications = await ref
+        .read(notificationInboxRepositoryProvider)
+        .list(limit: 6);
     if (mounted) {
-      setState(() {
-        _allRead = !hasUnread;
-        _reminders = reminders;
-      });
+      setState(() => _notifications = notifications);
     }
   }
 
   Future<void> _markAllRead() async {
-    await (await SharedPreferences.getInstance()).setString(
-      _notificationReadAtKey,
-      DateTime.now().toIso8601String(),
-    );
+    await ref.read(notificationInboxRepositoryProvider).markAllRead();
     ref.invalidate(notificationInboxUnreadProvider);
-    if (mounted) setState(() => _allRead = true);
+    await _load();
   }
 
   @override
   Widget build(BuildContext context) {
-    final notifications = [
-      ..._reminders.map(
-        (reminder) => (
-          Icons.event_repeat_outlined,
-          reminder['title'] as String,
-          '${context.l10n.phrase('Upcoming reminder')} • ${DateFormat.yMMMd().format(DateTime.parse(reminder['scheduled_at'] as String))}',
-        ),
-      ),
-      (
-        Icons.insights_outlined,
-        context.l10n.phrase('Monthly summary'),
-        context.l10n.phrase('Your latest financial summary is ready.'),
-      ),
-      (
-        Icons.handshake_outlined,
-        context.l10n.phrase('Udhaar reminders'),
-        context.l10n.phrase('Upcoming Udhaar due dates will appear here.'),
-      ),
-      (
-        Icons.security_outlined,
-        context.l10n.phrase('Account security'),
-        context.l10n.phrase('Keep biometric lock enabled for extra security.'),
-      ),
-    ];
+    final notifications = _notifications ?? const <InboxNotification>[];
+    final allRead = notifications.every((item) => !item.isUnread);
     return Dialog(
       alignment: Alignment.topCenter,
       insetPadding: const EdgeInsets.fromLTRB(18, 70, 18, 24),
@@ -123,7 +77,7 @@ class _NotificationPopupState extends ConsumerState<_NotificationPopup> {
                     ),
                   ),
                   TextButton(
-                    onPressed: _allRead ? null : _markAllRead,
+                    onPressed: allRead ? null : _markAllRead,
                     child: Text(context.l10n.phrase('Mark all as read')),
                   ),
                   IconButton(
@@ -134,22 +88,55 @@ class _NotificationPopupState extends ConsumerState<_NotificationPopup> {
                 ],
               ),
               const Divider(),
-              ...notifications.map(
-                (notification) => ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                  leading: CircleAvatar(
-                    backgroundColor: AppColors.emerald.withValues(alpha: .12),
-                    child: Icon(notification.$1, color: AppColors.emerald),
+              if (_notifications == null)
+                const Padding(
+                  padding: EdgeInsets.all(28),
+                  child: CircularProgressIndicator(),
+                )
+              else if (notifications.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: Text(context.l10n.phrase('No notifications yet')),
+                )
+              else
+                ...notifications.map(
+                  (notification) => ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                    leading: CircleAvatar(
+                      backgroundColor: AppColors.emerald.withValues(alpha: .12),
+                      child: Icon(
+                        Icons.notifications_outlined,
+                        color: AppColors.emerald,
+                      ),
+                    ),
+                    title: Text(notification.title),
+                    subtitle: Text(notification.body),
+                    trailing: notification.isUnread
+                        ? const CircleAvatar(
+                            radius: 4,
+                            backgroundColor: AppColors.cyan,
+                          )
+                        : const Icon(Icons.done_all, size: 18),
+                    onTap: () async {
+                      await ref
+                          .read(notificationInboxRepositoryProvider)
+                          .markRead(notification.id);
+                      ref.invalidate(notificationInboxUnreadProvider);
+                      if (!context.mounted) return;
+                      Navigator.pop(context);
+                      if (notification.route != null) {
+                        context.push(notification.route!);
+                      }
+                    },
                   ),
-                  title: Text(notification.$2),
-                  subtitle: Text(notification.$3),
-                  trailing: _allRead
-                      ? const Icon(Icons.done_all, size: 18)
-                      : const CircleAvatar(
-                          radius: 4,
-                          backgroundColor: AppColors.cyan,
-                        ),
                 ),
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  context.push('/notifications');
+                },
+                icon: const Icon(Icons.open_in_new_rounded),
+                label: Text(context.l10n.phrase('Open notification center')),
               ),
               const SizedBox(height: 6),
             ],

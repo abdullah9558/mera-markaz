@@ -6,6 +6,8 @@ enum TransactionType { income, expense }
 enum TransactionSource {
   manual,
   salary,
+  freelancer,
+  bill,
   fuel,
   electricity,
   udhaar,

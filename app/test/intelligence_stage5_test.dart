@@ -9,6 +9,7 @@ import 'package:pakpocket/features/intelligence/domain/markaz_ai.dart';
 import 'package:pakpocket/features/savings/domain/savings_goal.dart';
 import 'package:pakpocket/features/udhaar/domain/ledger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pakpocket/core/pakistan_data/pakistan_data_point.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
@@ -20,6 +21,12 @@ void main() {
     List<CategorySpending> categories = const [],
     List<CategoryBudgetStatus> budgets = const [],
     List<SavingsGoal> goals = const [],
+    double safeToSpend = 0,
+    double upcomingCommitments = 0,
+    double reserve = 0,
+    List<PakistanDataPoint> indicators = const [],
+    List<LedgerPerson> ledgerPeople = const [],
+    List<CategorySpending> previousCategories = const [],
   }) => IntelligenceSnapshot(
     period: FinancialPeriodSummary(
       start: DateTime(2026, 8),
@@ -33,6 +40,12 @@ void main() {
     categoryBudgets: budgets,
     ledger: ledger,
     goals: goals,
+    safeToSpend: safeToSpend,
+    upcomingCommitments: upcomingCommitments,
+    reserve: reserve,
+    pakistanIndicators: indicators,
+    ledgerPeople: ledgerPeople,
+    previousCategories: previousCategories,
   );
 
   test('Markaz Score reaches 100 only from explainable healthy factors', () {
@@ -110,6 +123,84 @@ void main() {
       urdu: false,
     );
     expect(answer, contains('Rs. 12500'));
+  });
+
+  test('local query engine explains affordability without AI', () {
+    final answer = const LocalMarkazQueryEngine().answer(
+      'Can I afford Rs. 50,000 this month?',
+      snapshot(safeToSpend: 42000, upcomingCommitments: 18000, reserve: 10000),
+      urdu: false,
+    );
+    expect(answer, contains('exceeds'));
+    expect(answer, contains('Rs. 42000'));
+  });
+
+  test('local engine answers person-specific Udhaar without cloud sharing', () {
+    final answer = const LocalMarkazQueryEngine().answer(
+      'How much does Ahmed owe me in Udhaar?',
+      snapshot(
+        ledgerPeople: const [
+          LedgerPerson(id: 1, name: 'Ahmed', toReceive: 25000, toPay: 0),
+        ],
+      ),
+      urdu: false,
+    );
+    expect(answer, contains('Ahmed'));
+    expect(answer, contains('Rs. 25000'));
+    expect(safeAiSummary(snapshot()).keys, isNot(contains('ledgerPeople')));
+  });
+
+  test('local engine compares category increases deterministically', () {
+    final answer = const LocalMarkazQueryEngine().answer(
+      'Which category increased most?',
+      snapshot(
+        categories: const [
+          CategorySpending(categoryId: 1, categoryName: 'Food', amount: 30000),
+          CategorySpending(categoryId: 2, categoryName: 'Fuel', amount: 15000),
+        ],
+        previousCategories: const [
+          CategorySpending(categoryId: 1, categoryName: 'Food', amount: 10000),
+          CategorySpending(categoryId: 2, categoryName: 'Fuel', amount: 12000),
+        ],
+      ),
+      urdu: false,
+    );
+    expect(answer, contains('Food'));
+    expect(answer, contains('Rs. 20000'));
+  });
+
+  test('local Pakistan answer includes source and freshness', () {
+    final answer = const LocalMarkazQueryEngine().answer(
+      'What is the USD rate?',
+      snapshot(
+        indicators: [
+          PakistanDataPoint(
+            seriesKey: 'usd_pkr',
+            value: 281.5,
+            unit: 'PKR',
+            sourceName: 'State Bank of Pakistan',
+            sourceReference: 'SBP',
+            effectiveAt: DateTime(2026, 8, 30),
+            retrievedAt: DateTime(2026, 8, 30),
+            freshness: DataFreshness.cached,
+            configVersion: 'test',
+          ),
+        ],
+      ),
+      urdu: false,
+    );
+    expect(answer, contains('281.50'));
+    expect(answer, contains('State Bank of Pakistan'));
+    expect(answer, contains('cached'));
+  });
+
+  test('safe online summary includes aggregates but no raw indicator URLs', () {
+    final summary = safeAiSummary(
+      snapshot(safeToSpend: 25000, upcomingCommitments: 10000),
+    );
+    expect(summary['safeToSpend'], 25000);
+    expect(summary['upcomingCommitments'], 10000);
+    expect('$summary', isNot(contains('sourceReference')));
   });
 
   test('online AI summary contains aggregates and excludes identity data', () {
