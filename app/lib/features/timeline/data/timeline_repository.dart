@@ -37,9 +37,21 @@ class TimelineRepository {
           -c.amount, c.contributed_at
         FROM goal_contributions c JOIN savings_goals g ON g.id = c.goal_id
         WHERE c.owner_id = ?
+        UNION ALL
+        SELECT 'bill:' || b.id, 'expense', b.provider, 'Upcoming bill',
+          -b.amount, b.due_date
+        FROM bills b
+        WHERE b.owner_id = ? AND b.status = 'unpaid'
       ) ORDER BY event_date DESC LIMIT ? OFFSET ?
       ''',
-      [_database.ownerId, _database.ownerId, _database.ownerId, limit, offset],
+      [
+        _database.ownerId,
+        _database.ownerId,
+        _database.ownerId,
+        _database.ownerId,
+        limit,
+        offset,
+      ],
     );
     final query = filter.query.trim().toLowerCase();
     return rows

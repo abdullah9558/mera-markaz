@@ -66,6 +66,8 @@ abstract final class AppTheme {
         bodyColor: scheme.onSurface,
         displayColor: scheme.onSurface,
       ),
+      focusColor: scheme.primary.withValues(alpha: .18),
+      hoverColor: scheme.primary.withValues(alpha: .08),
       appBarTheme: AppBarTheme(
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -138,6 +140,7 @@ abstract final class AppTheme {
       ),
       iconButtonTheme: IconButtonThemeData(
         style: ButtonStyle(
+          minimumSize: const WidgetStatePropertyAll(Size(48, 48)),
           foregroundColor: WidgetStateProperty.resolveWith(
             (states) => states.contains(WidgetState.pressed)
                 ? scheme.secondary
@@ -215,6 +218,15 @@ abstract final class AppTheme {
         thickness: 1,
       ),
       chipTheme: base.chipTheme.copyWith(
+        labelStyle: TextStyle(
+          color: scheme.onSurface,
+          fontWeight: FontWeight.w700,
+        ),
+        secondaryLabelStyle: TextStyle(
+          color: scheme.onPrimaryContainer,
+          fontWeight: FontWeight.w800,
+        ),
+        selectedColor: scheme.primaryContainer,
         side: BorderSide(color: scheme.outlineVariant),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
