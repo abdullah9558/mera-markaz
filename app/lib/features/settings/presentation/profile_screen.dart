@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/security/biometric_service.dart';
@@ -365,6 +366,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 actions: [
                   IconButton(
+                    tooltip: context.l10n.phrase('Notifications'),
                     onPressed: () => showNotificationPopup(context),
                     icon: Badge(
                       isLabelVisible: hasUnreadNotifications,
@@ -400,6 +402,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     _SettingsCard(
                       title: context.l10n.phrase('MY ACCOUNT'),
                       children: [
+                        _SettingsTile(
+                          icon: Icons.notifications_active_outlined,
+                          label: context.l10n.phrase('Markaz Alerts'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => context.push('/notifications'),
+                        ),
+                        _SettingsTile(
+                          icon: Icons.tune_rounded,
+                          label: context.l10n.phrase('Notification settings'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => context.push('/notification-settings'),
+                        ),
                         _SettingsTile(
                           icon: Icons.manage_accounts_outlined,
                           label: context.l10n.phrase('Edit Profile'),

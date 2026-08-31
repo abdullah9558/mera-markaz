@@ -261,6 +261,66 @@ class _LedgerDetailScreenState extends ConsumerState<LedgerDetailScreen> {
     }
   }
 
+  Future<void> createInstallments(LedgerEntry entry) async {
+    final count = TextEditingController(text: '3');
+    var firstDue = entry.dueAt ?? DateTime.now().add(const Duration(days: 30));
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(context.l10n.phrase('Create installment plan')),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: count,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: context.l10n.phrase('Number of installments'),
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final value = await showDatePicker(
+                    context: context,
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 3650)),
+                    initialDate: firstDue,
+                  );
+                  if (value != null) setDialogState(() => firstDue = value);
+                },
+                icon: const Icon(Icons.event),
+                label: Text(DateFormat.yMMMd().format(firstDue)),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(context.l10n.phrase('Cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(context.l10n.phrase('Create')),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (accepted == true) {
+      await ref
+          .read(ledgerRepositoryProvider)
+          .createInstallmentPlan(
+            entry,
+            count: int.tryParse(count.text) ?? 0,
+            firstDue: firstDue,
+          );
+      if (mounted) setState(() {});
+    }
+    count.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
@@ -356,14 +416,73 @@ class _LedgerDetailScreenState extends ConsumerState<LedgerDetailScreen> {
                         '${context.l10n.phrase('Due')} ${DateFormat.yMMMd().format(entry.dueAt!)}',
                       ),
                     if (entry.remaining > 0)
-                      Align(
-                        alignment: AlignmentDirectional.centerEnd,
-                        child: TextButton.icon(
-                          onPressed: () => pay(entry),
-                          icon: Icon(Icons.payments_outlined),
-                          label: Text(context.l10n.phrase('Record payment')),
-                        ),
+                      Wrap(
+                        alignment: WrapAlignment.end,
+                        children: [
+                          TextButton.icon(
+                            onPressed: () => createInstallments(entry),
+                            icon: const Icon(Icons.calendar_month_outlined),
+                            label: Text(context.l10n.phrase('Installments')),
+                          ),
+                          TextButton.icon(
+                            onPressed: () => pay(entry),
+                            icon: const Icon(Icons.payments_outlined),
+                            label: Text(context.l10n.phrase('Record payment')),
+                          ),
+                        ],
                       ),
+                    ExpansionTile(
+                      tilePadding: EdgeInsets.zero,
+                      title: Text(context.l10n.phrase('Repayment details')),
+                      children: [
+                        FutureBuilder<List<LedgerInstallment>>(
+                          future: ref
+                              .read(ledgerRepositoryProvider)
+                              .installments(entry.id),
+                          builder: (context, plan) => Column(
+                            children: (plan.data ?? const [])
+                                .map(
+                                  (item) => ListTile(
+                                    dense: true,
+                                    leading: Icon(
+                                      item.status == 'paid'
+                                          ? Icons.check_circle
+                                          : Icons.schedule,
+                                    ),
+                                    title: Text(
+                                      '${context.l10n.phrase('Installment')} ${item.number} • ${_ledgerMoney(item.amount)}',
+                                    ),
+                                    subtitle: Text(
+                                      DateFormat.yMMMd().format(item.dueAt),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ),
+                        FutureBuilder<List<LedgerPayment>>(
+                          future: ref
+                              .read(ledgerRepositoryProvider)
+                              .paymentHistory(entry.id),
+                          builder: (context, history) => Column(
+                            children: (history.data ?? const [])
+                                .map(
+                                  (item) => ListTile(
+                                    dense: true,
+                                    leading: const Icon(Icons.history),
+                                    title: Text(
+                                      '${context.l10n.phrase('Payment')} ${_ledgerMoney(item.amount)}',
+                                    ),
+                                    subtitle: Text(
+                                      DateFormat.yMMMd().format(item.paidAt),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),

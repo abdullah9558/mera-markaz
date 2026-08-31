@@ -64,14 +64,21 @@ void main() {
     final tables = await upgraded.database.query(
       'sqlite_master',
       columns: ['name'],
-      where: "type = 'table' AND name IN (?, ?, ?)",
-      whereArgs: ['savings_goals', 'recurring_transactions', 'reminders'],
+      where: "type = 'table' AND name IN (?, ?, ?, ?, ?, ?)",
+      whereArgs: [
+        'savings_goals',
+        'recurring_transactions',
+        'reminders',
+        'pakistan_data_points',
+        'notification_inbox',
+        'watch_conditions',
+      ],
     );
 
     expect(rows, hasLength(1));
     expect(rows.single['description'], 'Existing grocery');
     expect(rows.single['source'], 'manual');
-    expect(tables, hasLength(3));
+    expect(tables, hasLength(6));
 
     await upgraded.close();
     await deleteDatabase(path);

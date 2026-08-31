@@ -2,6 +2,7 @@ import '../../analytics/domain/financial_analytics.dart';
 import '../../expenses/domain/budget_analytics.dart';
 import '../../savings/domain/savings_goal.dart';
 import '../../udhaar/domain/ledger.dart';
+import '../../../core/pakistan_data/pakistan_data_point.dart';
 
 enum InsightKind { positive, warning, neutral }
 
@@ -59,12 +60,24 @@ class IntelligenceSnapshot {
     required this.categoryBudgets,
     required this.ledger,
     required this.goals,
+    this.safeToSpend = 0,
+    this.upcomingCommitments = 0,
+    this.reserve = 0,
+    this.pakistanIndicators = const [],
+    this.ledgerPeople = const [],
+    this.previousCategories = const [],
   });
   final FinancialPeriodSummary period;
   final List<CategorySpending> categories;
   final List<CategoryBudgetStatus> categoryBudgets;
   final LedgerSummary ledger;
   final List<SavingsGoal> goals;
+  final double safeToSpend;
+  final double upcomingCommitments;
+  final double reserve;
+  final List<PakistanDataPoint> pakistanIndicators;
+  final List<LedgerPerson> ledgerPeople;
+  final List<CategorySpending> previousCategories;
 }
 
 class FinancialIntelligenceEngine {
