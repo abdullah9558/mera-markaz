@@ -20,6 +20,14 @@ class PakistanDataService {
   static final Uri _exchangeEndpoint = Uri.parse(
     'https://open.er-api.com/v6/latest/USD',
   );
+  static final Uri _goldEndpoint = Uri.parse(
+    'https://api.gold-api.com/price/XAU',
+  );
+  static final Uri _silverEndpoint = Uri.parse(
+    'https://api.gold-api.com/price/XAG',
+  );
+  static const _gramsPerTola = 11.6638038;
+  static const _gramsPerTroyOunce = 31.1034768;
   static const _exchangeCurrencies = <String>[
     'USD',
     'GBP',
@@ -131,7 +139,64 @@ class PakistanDataService {
         'configVersion': 'exchange-open-v1',
       });
     }
+    try {
+      payload.addAll(
+        await _metalPayload(
+          pkrPerUsd: pkr.toDouble(),
+          retrievedAt: retrievedAt,
+        ),
+      );
+    } catch (_) {
+      // Currency data remains useful when a precious-metal feed is down.
+    }
     return _storePayload(payload);
+  }
+
+  Future<List<Map<String, Object?>>> _metalPayload({
+    required double pkrPerUsd,
+    required DateTime retrievedAt,
+  }) async {
+    final responses = await Future.wait([
+      _readJson(_goldEndpoint),
+      _readJson(_silverEndpoint),
+    ]);
+    final output = <Map<String, Object?>>[];
+    for (var index = 0; index < responses.length; index++) {
+      final response = responses[index];
+      final price = response['price'];
+      if (price is! num || price <= 0) continue;
+      final effectiveAt =
+          DateTime.tryParse('${response['updatedAt']}') ?? retrievedAt;
+      final perTolaPkr =
+          price.toDouble() * (_gramsPerTola / _gramsPerTroyOunce) * pkrPerUsd;
+      final isGold = index == 0;
+      output.add({
+        'seriesKey': isGold ? 'gold_24k_tola' : 'silver_tola',
+        'value': perTolaPkr,
+        'unit': 'PKR',
+        'sourceName': 'Gold-API international spot estimate',
+        'sourceReference': (isGold ? _goldEndpoint : _silverEndpoint)
+            .toString(),
+        'effectiveAt': effectiveAt.toUtc().toIso8601String(),
+        'retrievedAt': retrievedAt.toIso8601String(),
+        'configVersion': 'metal-spot-pkr-v1',
+      });
+    }
+    return output;
+  }
+
+  Future<Map<String, Object?>> _readJson(Uri uri) async {
+    final request = await _client.getUrl(uri);
+    request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+    final response = await request.close().timeout(const Duration(seconds: 12));
+    if (response.statusCode != HttpStatus.ok) {
+      throw HttpException('Data source failed (${response.statusCode}).');
+    }
+    final decoded = jsonDecode(await utf8.decoder.bind(response).join());
+    if (decoded is! Map) {
+      throw const FormatException('Data source response is invalid.');
+    }
+    return Map<String, Object?>.from(decoded);
   }
 
   Future<int> _storePayload(List<dynamic> payload) async {
