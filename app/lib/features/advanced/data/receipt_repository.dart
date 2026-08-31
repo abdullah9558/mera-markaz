@@ -28,6 +28,10 @@ class ReceiptDraft {
     required this.purchasedAt,
     required this.rawText,
     required this.status,
+    required this.documentType,
+    this.dueAt,
+    this.referenceNumber,
+    this.units,
   });
   final int id;
   final String imagePath;
@@ -36,6 +40,10 @@ class ReceiptDraft {
   final DateTime purchasedAt;
   final String rawText;
   final String status;
+  final ReceiptDocumentType documentType;
+  final DateTime? dueAt;
+  final String? referenceNumber;
+  final double? units;
 }
 
 class ReceiptRepository {
@@ -77,6 +85,10 @@ class ReceiptRepository {
       'total': parsed.total,
       'purchased_at': parsed.date.toIso8601String(),
       'raw_text': rawText,
+      'document_type': parsed.documentType.name,
+      'due_at': parsed.dueDate?.toIso8601String(),
+      'reference_number': parsed.referenceNumber,
+      'units': parsed.units,
       'status': 'draft',
       'created_at': DateTime.now().toIso8601String(),
       'owner_id': _database.ownerId,
@@ -89,6 +101,10 @@ class ReceiptRepository {
       purchasedAt: parsed.date,
       rawText: rawText,
       status: 'draft',
+      documentType: parsed.documentType,
+      dueAt: parsed.dueDate,
+      referenceNumber: parsed.referenceNumber,
+      units: parsed.units,
     );
   }
 
@@ -153,8 +169,18 @@ class ReceiptRepository {
         : DateTime.parse(row['purchased_at'] as String),
     rawText: row['raw_text'] as String? ?? '',
     status: row['status'] as String,
+    documentType: ReceiptDocumentType.values.byName(
+      row['document_type'] as String? ?? 'receipt',
+    ),
+    dueAt: row['due_at'] == null
+        ? null
+        : DateTime.parse(row['due_at'] as String),
+    referenceNumber: row['reference_number'] as String?,
+    units: (row['units'] as num?)?.toDouble(),
   );
 }
+
+enum ReceiptDocumentType { receipt, fuelReceipt, electricityBill, otherBill }
 
 class ReceiptFileMigrationService {
   ReceiptFileMigrationService(this._database, {EncryptedFileService? files})
@@ -197,10 +223,18 @@ class ParsedReceipt {
     required this.merchant,
     required this.total,
     required this.date,
+    required this.documentType,
+    this.dueDate,
+    this.referenceNumber,
+    this.units,
   });
   final String merchant;
   final double total;
   final DateTime date;
+  final ReceiptDocumentType documentType;
+  final DateTime? dueDate;
+  final String? referenceNumber;
+  final double? units;
 }
 
 abstract final class ReceiptTextParser {
@@ -232,10 +266,45 @@ abstract final class ReceiptTextParser {
       (line) => RegExp(r'[A-Za-z]{3}').hasMatch(line),
       orElse: () => 'Receipt expense',
     );
+    final lower = text.toLowerCase();
+    final documentType = lower.contains('kwh') || lower.contains('meter')
+        ? ReceiptDocumentType.electricityBill
+        : lower.contains('fuel') ||
+              lower.contains('petrol') ||
+              lower.contains('diesel')
+        ? ReceiptDocumentType.fuelReceipt
+        : lower.contains('due date') || lower.contains('invoice')
+        ? ReceiptDocumentType.otherBill
+        : ReceiptDocumentType.receipt;
+    final unitsMatch = RegExp(
+      r'(?:units?|kwh)\D{0,10}(\d+(?:\.\d+)?)',
+      caseSensitive: false,
+    ).firstMatch(text);
+    final referenceMatch = RegExp(
+      r'(?:reference|ref|consumer|account)\s*(?:no|number)?\s*[:#-]?\s*([a-z0-9-]{5,})',
+      caseSensitive: false,
+    ).firstMatch(text);
+    final dueMatch = RegExp(
+      r'(?:due\s*date)\D{0,8}(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})',
+      caseSensitive: false,
+    ).firstMatch(text);
+    DateTime? dueDate;
+    if (dueMatch != null) {
+      final year = int.parse(dueMatch.group(3)!);
+      dueDate = DateTime(
+        year < 100 ? 2000 + year : year,
+        int.parse(dueMatch.group(2)!),
+        int.parse(dueMatch.group(1)!),
+      );
+    }
     return ParsedReceipt(
       merchant: merchant,
       total: total,
       date: now ?? DateTime.now(),
+      documentType: documentType,
+      dueDate: dueDate,
+      referenceNumber: referenceMatch?.group(1),
+      units: unitsMatch == null ? null : double.tryParse(unitsMatch.group(1)!),
     );
   }
 }

@@ -75,6 +75,25 @@ void main() {
     expect(income?.amount, 180000);
   });
 
+  test('voice parser understands Roman Urdu Udhaar intent', () {
+    final receive = VoiceTransactionParser.parse('Ahmed se 25000 lene hain');
+    final pay = VoiceTransactionParser.parse('Ali ko 12000 dene hain');
+    final salary = VoiceTransactionParser.parse('Tankhwa 180000 receive hui');
+    expect(receive?.kind, VoiceEntryKind.udhaarReceivable);
+    expect(pay?.kind, VoiceEntryKind.udhaarPayable);
+    expect(salary?.kind, VoiceEntryKind.income);
+  });
+
+  test('bill parser detects electricity fields for review', () {
+    final result = ReceiptTextParser.parse(
+      'LESCO\nConsumer No 123456789\nUnits 420 kWh\nDue Date 18/09/2026\nTotal 18500',
+    );
+    expect(result.documentType, ReceiptDocumentType.electricityBill);
+    expect(result.units, 420);
+    expect(result.referenceNumber, '123456789');
+    expect(result.dueDate, DateTime(2026, 9, 18));
+  });
+
   test('net worth accounts keep assets and liabilities separate', () async {
     final repository = NetWorthRepository(database);
     await repository.save(name: 'Bank', kind: 'asset', balance: 100000);
@@ -82,5 +101,8 @@ void main() {
     final accounts = await repository.accounts();
     expect(accounts.where((item) => item.isLiability), hasLength(1));
     expect(accounts.where((item) => !item.isLiability), hasLength(1));
+    final history = await repository.history();
+    expect(history, hasLength(2));
+    expect(history.last.netWorth, 75000);
   });
 }

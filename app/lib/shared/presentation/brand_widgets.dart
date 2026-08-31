@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/theme/app_theme.dart';
 
@@ -133,24 +134,122 @@ class _InteractiveTapState extends State<InteractiveTap> {
   bool _pressed = false;
 
   @override
-  Widget build(BuildContext context) => AnimatedScale(
-    scale: _pressed ? .965 : 1,
-    duration: const Duration(milliseconds: 130),
-    curve: Curves.easeOutCubic,
-    child: Material(
-      color: Colors.transparent,
-      borderRadius: widget.borderRadius,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onHighlightChanged: (value) {
-          if (_pressed != value) setState(() => _pressed = value);
-        },
-        onTap: () {
-          Feedback.forTap(context);
-          widget.onTap();
-        },
+  Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    return AnimatedScale(
+      scale: !reduceMotion && _pressed ? .965 : 1,
+      duration: reduceMotion
+          ? Duration.zero
+          : const Duration(milliseconds: 130),
+      curve: Curves.easeOutCubic,
+      child: Material(
+        color: Colors.transparent,
         borderRadius: widget.borderRadius,
-        child: widget.child,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onHighlightChanged: (value) {
+            if (_pressed != value) setState(() => _pressed = value);
+          },
+          onTap: () {
+            HapticFeedback.selectionClick();
+            widget.onTap();
+          },
+          borderRadius: widget.borderRadius,
+          child: widget.child,
+        ),
+      ),
+    );
+  }
+}
+
+class ResponsivePage extends StatelessWidget {
+  const ResponsivePage({
+    super.key,
+    required this.child,
+    this.maxWidth = 760,
+    this.padding = const EdgeInsets.symmetric(horizontal: 16),
+  });
+
+  final Widget child;
+  final double maxWidth;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+    child: Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: Padding(padding: padding, child: child),
+      ),
+    ),
+  );
+}
+
+class PolishedAsyncState extends StatelessWidget {
+  const PolishedAsyncState({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+    this.loading = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    liveRegion: true,
+    label: '$title. $message',
+    child: Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (loading)
+                const CircularProgressIndicator()
+              else
+                Icon(
+                  icon,
+                  size: 52,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              const SizedBox(height: 18),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              if (onAction != null && actionLabel != null) ...[
+                const SizedBox(height: 18),
+                FilledButton.tonal(
+                  onPressed: onAction,
+                  child: Text(actionLabel!),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     ),
   );

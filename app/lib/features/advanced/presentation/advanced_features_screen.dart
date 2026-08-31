@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 import '../../../core/localization/app_localizations.dart';
@@ -21,6 +22,43 @@ class AdvancedFeaturesScreen extends StatelessWidget {
     body: ListView(
       padding: const EdgeInsets.all(20),
       children: [
+        _FeatureTile(
+          icon: Icons.widgets_outlined,
+          title: 'Home-screen widgets',
+          subtitle: 'Configure privacy, theme and widget content',
+          onTap: () => context.push('/widget-settings'),
+        ),
+        _FeatureTile(
+          icon: Icons.groups_2_outlined,
+          title: 'Pakistan Money Center',
+          subtitle: 'Committee, advanced Udhaar and household privacy',
+          onTap: () => context.push('/pakistan-specific'),
+        ),
+        _FeatureTile(
+          icon: Icons.query_stats_outlined,
+          title: 'Advanced Finance Center',
+          subtitle:
+              'Financing, inflation, purchasing power and financial health',
+          onTap: () => context.push('/advanced-finance'),
+        ),
+        _FeatureTile(
+          icon: Icons.workspace_premium_outlined,
+          title: 'Gold & Zakat Center',
+          subtitle: 'Live metal values, holdings and annual Zakat history',
+          onTap: () => context.push('/gold-zakat'),
+        ),
+        _FeatureTile(
+          icon: Icons.energy_savings_leaf_outlined,
+          title: 'Energy Intelligence',
+          subtitle: 'Electricity history, appliance scenarios and solar ROI',
+          onTap: () => context.push('/energy-intelligence'),
+        ),
+        _FeatureTile(
+          icon: Icons.account_balance_wallet_outlined,
+          title: 'Personal Finance Center',
+          subtitle: 'Salary, freelancer income, bills and emergency fund',
+          onTap: () => context.push('/personal-finance'),
+        ),
         _FeatureTile(
           icon: Icons.document_scanner_outlined,
           title: 'Receipt scanner',
@@ -169,6 +207,30 @@ class _ReceiptScannerScreenState extends ConsumerState<ReceiptScannerScreen> {
                     labelText: context.l10n.phrase('Total'),
                   ),
                 ),
+                if (draft.documentType != ReceiptDocumentType.receipt)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.description_outlined),
+                    title: Text(
+                      context.l10n.phrase(switch (draft.documentType) {
+                        ReceiptDocumentType.fuelReceipt => 'Fuel receipt',
+                        ReceiptDocumentType.electricityBill =>
+                          'Electricity bill',
+                        ReceiptDocumentType.otherBill => 'Other bill',
+                        ReceiptDocumentType.receipt => 'Receipt',
+                      }),
+                    ),
+                    subtitle: Text(
+                      [
+                        if (draft.referenceNumber != null)
+                          '${context.l10n.phrase('Reference')}: ${draft.referenceNumber}',
+                        if (draft.units != null)
+                          '${context.l10n.phrase('Units')}: ${draft.units}',
+                        if (draft.dueAt != null)
+                          '${context.l10n.phrase('Due')}: ${DateFormat.yMMMd().format(draft.dueAt!)}',
+                      ].join(' • '),
+                    ),
+                  ),
                 DropdownButtonFormField(
                   initialValue: category.id,
                   decoration: InputDecoration(
@@ -316,6 +378,50 @@ class _VoiceEntryScreenState extends ConsumerState<VoiceEntryScreen> {
       );
       return;
     }
+    if (draft.kind == VoiceEntryKind.udhaarReceivable ||
+        draft.kind == VoiceEntryKind.udhaarPayable) {
+      final open = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(context.l10n.phrase('Review detected entry')),
+          content: Text(
+            '${context.l10n.phrase(draft.kind == VoiceEntryKind.udhaarReceivable ? 'Udhaar receivable' : 'Udhaar payable')}\nRs. ${draft.amount.toStringAsFixed(0)}\n${draft.description}',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(context.l10n.phrase('Edit')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(context.l10n.phrase('Continue')),
+            ),
+          ],
+        ),
+      );
+      if (open == true && mounted) context.go('/udhaar');
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.l10n.phrase('Review detected entry')),
+        content: Text(
+          '${context.l10n.phrase(draft.isIncome ? 'Income' : 'Expense')}\nRs. ${draft.amount.toStringAsFixed(0)}\n${draft.description}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(context.l10n.phrase('Edit')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(context.l10n.phrase('Confirm')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     final type = draft.isIncome
         ? TransactionType.income
         : TransactionType.expense;
