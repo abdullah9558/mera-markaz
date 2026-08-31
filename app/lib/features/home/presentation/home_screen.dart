@@ -4,6 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/localization/app_localizations.dart';
+import '../../../core/widgets/widget_snapshot_service.dart';
+import '../../../core/notifications/markaz_alert_orchestrator.dart';
+import '../../advanced/data/net_worth_repository.dart';
+import '../../electricity/data/energy_intelligence_repository.dart';
+import '../../intelligence/domain/financial_intelligence.dart';
+import '../../metals/data/metal_zakat_repository.dart';
+import '../../../core/pakistan_data/pakistan_data_point.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/presentation/brand_widgets.dart';
 import '../../../shared/presentation/notification_popup.dart';
@@ -14,7 +21,9 @@ import '../../expenses/data/expense_repository.dart';
 import '../../expenses/domain/budget_analytics.dart';
 import '../../expenses/domain/finance_transaction.dart';
 import '../../expenses/presentation/expenses_screen.dart';
+import '../../recurring/domain/recurring_transaction.dart';
 import 'dashboard_provider.dart';
+import '../data/dashboard_layout_repository.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -27,6 +36,7 @@ class HomeScreen extends ConsumerWidget {
     ('Ask Markaz AI', Icons.auto_awesome_outlined, 'ai'),
     ('Savings', Icons.savings_outlined, '/savings'),
     ('Calculate Tax', Icons.account_balance_outlined, '/tool/tax'),
+    ('Pakistan Live', Icons.public_rounded, '/pakistan-live'),
   ];
 
   static const _tools = [
@@ -53,9 +63,89 @@ class HomeScreen extends ConsumerWidget {
     if (changed == true) ref.invalidate(homeDashboardProvider);
   }
 
+  Future<void> _setReserve(BuildContext context, WidgetRef ref) async {
+    var input = ref.read(safeToSpendReserveProvider).toStringAsFixed(0);
+    final value = await showDialog<double>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.l10n.phrase('Safety reserve')),
+        content: TextFormField(
+          initialValue: input,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          onChanged: (value) => input = value,
+          decoration: InputDecoration(
+            prefixText: 'Rs. ',
+            labelText: context.l10n.phrase('Amount to keep untouched'),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(context.l10n.phrase('Cancel')),
+          ),
+          FilledButton(
+            onPressed: () {
+              final parsed = double.tryParse(input.replaceAll(',', '').trim());
+              if (parsed != null && parsed >= 0) {
+                Navigator.pop(dialogContext, parsed);
+              }
+            },
+            child: Text(context.l10n.phrase('Save')),
+          ),
+        ],
+      ),
+    );
+    if (value != null) {
+      await ref.read(safeToSpendReserveProvider.notifier).set(value);
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboardState = ref.watch(homeDashboardProvider);
+    ref.listen(homeDashboardProvider, (_, next) {
+      next.whenData((value) async {
+        if (!ref.read(androidHomeBackgroundSyncProvider)) return;
+        try {
+          await ref.read(markazAlertOrchestratorProvider).refresh();
+          final accounts = await ref
+              .read(netWorthRepositoryProvider)
+              .accounts();
+          final netWorth = accounts.fold<double>(
+            0,
+            (sum, item) =>
+                sum + (item.isLiability ? -item.balance : item.balance),
+          );
+          final score = const FinancialIntelligenceEngine().score(
+            IntelligenceSnapshot(
+              period: value.finance,
+              categories: value.categories,
+              categoryBudgets: value.categoryBudgets,
+              ledger: value.ledger,
+              goals: value.savingsGoals,
+            ),
+          );
+          final energy = ref.read(energyIntelligenceRepositoryProvider);
+          final systems = await energy.solarSystems();
+          final roi = systems.isEmpty
+              ? null
+              : await energy.solarRoi(systems.first.id);
+          final zakat = await ref
+              .read(metalZakatRepositoryProvider)
+              .zakatHistory();
+          await const WidgetSnapshotService().publish(
+            value,
+            netWorth: netWorth,
+            healthScore: score.value,
+            solarProgress: roi?.progress,
+            zakatReview: zakat.firstOrNull?.reminderAt?.toIso8601String(),
+          );
+        } catch (_) {
+          await const WidgetSnapshotService().publish(value);
+        }
+      });
+    });
     final dashboard = dashboardState.asData?.value;
     final finance = dashboard?.finance;
     final ledger = dashboard?.ledger;
@@ -63,6 +153,13 @@ class HomeScreen extends ConsumerWidget {
     final score = ref.watch(markazScoreProvider).asData?.value;
     final insights = ref.watch(financialInsightsProvider).asData?.value;
     final profile = ref.watch(userProfileProvider).asData?.value;
+    final layout = ref.watch(dashboardLayoutProvider).asData?.value;
+    final visibleSections = (layout ?? const <DashboardSectionPreference>[])
+        .where((item) => item.visible)
+        .map((item) => item.section)
+        .toSet();
+    bool visible(DashboardSection section) =>
+        layout == null || visibleSections.contains(section);
     final userName = profile?.fullName.trim() ?? '';
     final salutation = context.l10n.phrase('Assalam-o-Alaikum');
     final hasUnreadNotifications =
@@ -139,6 +236,19 @@ class HomeScreen extends ConsumerWidget {
                     icon: const Icon(Icons.search_rounded),
                   ),
                   IconButton(
+                    tooltip: context.l10n.phrase('Customize Home'),
+                    onPressed: () async {
+                      final changed = await context.push<bool>(
+                        '/customize-home',
+                      );
+                      if (changed == true) {
+                        ref.invalidate(dashboardLayoutProvider);
+                      }
+                    },
+                    icon: const Icon(Icons.dashboard_customize_outlined),
+                  ),
+                  IconButton(
+                    tooltip: context.l10n.phrase('Notifications'),
                     onPressed: () => showNotificationPopup(context),
                     icon: Badge(
                       isLabelVisible: hasUnreadNotifications,
@@ -164,16 +274,40 @@ class HomeScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 14),
                     ],
-                    _BalanceCard(
-                      balance: _money(
-                        finance?.availableBalance ?? 0,
-                        hidden: privacy,
+                    if (visible(DashboardSection.balance))
+                      _BalanceCard(
+                        balance: _money(
+                          finance?.availableBalance ?? 0,
+                          hidden: privacy,
+                        ),
+                        income: _money(finance?.income ?? 0, hidden: privacy),
+                        expense: _money(
+                          finance?.expenses ?? 0,
+                          hidden: privacy,
+                        ),
+                        change: finance?.expenseChange,
                       ),
-                      income: _money(finance?.income ?? 0, hidden: privacy),
-                      expense: _money(finance?.expenses ?? 0, hidden: privacy),
-                      change: finance?.expenseChange,
-                    ),
-                    if (dashboard?.budget != null) ...[
+                    if (visible(DashboardSection.safeToSpend)) ...[
+                      const SizedBox(height: 14),
+                      _SafeToSpendCard(
+                        value: _money(
+                          dashboard?.safeToSpend ?? 0,
+                          hidden: privacy,
+                        ),
+                        commitments: _money(
+                          dashboard?.upcomingTotal ?? 0,
+                          hidden: privacy,
+                        ),
+                        reserve: _money(
+                          dashboard?.reserve ?? 0,
+                          hidden: privacy,
+                        ),
+                        isNegative: (dashboard?.safeToSpend ?? 0) < 0,
+                        onConfigure: () => _setReserve(context, ref),
+                      ),
+                    ],
+                    if (visible(DashboardSection.budget) &&
+                        dashboard?.budget != null) ...[
                       const SizedBox(height: 14),
                       _BudgetCard(
                         amount: _money(
@@ -192,155 +326,549 @@ class HomeScreen extends ConsumerWidget {
                       const SizedBox(height: 14),
                       _BudgetAlertCard(alert: dashboard!.newBudgetAlerts.last),
                     ],
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _UdhaarCard(
-                            icon: Icons.south_west_rounded,
-                            label: context.l10n.text('toReceive'),
-                            value: _money(
-                              ledger?.toReceive ?? 0,
-                              hidden: privacy,
+                    if (visible(DashboardSection.udhaar)) ...[
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _UdhaarCard(
+                              icon: Icons.south_west_rounded,
+                              label: context.l10n.text('toReceive'),
+                              value: _money(
+                                ledger?.toReceive ?? 0,
+                                hidden: privacy,
+                              ),
+                              color: AppColors.emerald,
+                              onTap: () => context.go('/udhaar'),
                             ),
-                            color: AppColors.emerald,
-                            onTap: () => context.go('/udhaar'),
                           ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: _UdhaarCard(
-                            icon: Icons.north_east_rounded,
-                            label: context.l10n.text('toPay'),
-                            value: _money(ledger?.toPay ?? 0, hidden: privacy),
-                            color: const Color(0xFFFFB4AB),
-                            onTap: () => context.go('/udhaar'),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: _UdhaarCard(
+                              icon: Icons.north_east_rounded,
+                              label: context.l10n.text('toPay'),
+                              value: _money(
+                                ledger?.toPay ?? 0,
+                                hidden: privacy,
+                              ),
+                              color: const Color(0xFFFFB4AB),
+                              onTap: () => context.go('/udhaar'),
+                            ),
                           ),
+                        ],
+                      ),
+                    ],
+                    if (visible(DashboardSection.quickActions)) ...[
+                      const SizedBox(height: 30),
+                      _SectionHeading(context.l10n.text('quickActions')),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        height: 108,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _quickActions.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 18),
+                          itemBuilder: (context, index) {
+                            final action = _quickActions[index];
+                            return _QuickAction(
+                              label: context.l10n.phrase(action.$1),
+                              icon: action.$2,
+                              onTap: () {
+                                if (action.$3 == 'expense') {
+                                  _openTransaction(
+                                    context,
+                                    ref,
+                                    TransactionType.expense,
+                                  );
+                                } else if (action.$3 == 'income') {
+                                  _openTransaction(
+                                    context,
+                                    ref,
+                                    TransactionType.income,
+                                  );
+                                } else if (action.$3 == 'ai') {
+                                  context.push('/markaz-ai');
+                                } else if (action.$3.startsWith('/tool/')) {
+                                  context.push(action.$3);
+                                } else {
+                                  context.go(action.$3);
+                                }
+                              },
+                            );
+                          },
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 30),
-                    _SectionHeading(context.l10n.text('quickActions')),
-                    const SizedBox(height: 14),
-                    SizedBox(
-                      height: 108,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _quickActions.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 18),
+                      ),
+                    ],
+                    if (visible(DashboardSection.insight)) ...[
+                      const SizedBox(height: 26),
+                      Card(
+                        child: ListTile(
+                          onTap: () => context.push('/markaz-ai'),
+                          leading: CircleAvatar(
+                            child: Text(score == null ? '—' : '${score.value}'),
+                          ),
+                          title: Text(context.l10n.phrase('Markaz Insight')),
+                          subtitle: Text(
+                            insights?.firstOrNull == null
+                                ? context.l10n.phrase(
+                                    "Keep using Mera Markaz and we'll show insights as your financial history grows.",
+                                  )
+                                : (Localizations.localeOf(
+                                            context,
+                                          ).languageCode ==
+                                          'ur'
+                                      ? insights!.first.urduMessage
+                                      : insights!.first.message),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                        ),
+                      ),
+                    ],
+                    if (visible(DashboardSection.pakistanToday)) ...[
+                      const SizedBox(height: 26),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _SectionHeading(
+                              context.l10n.phrase('Pakistan Today'),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => context.push('/pakistan-live'),
+                            child: Text(context.l10n.phrase('View all')),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      _PakistanTodayCard(
+                        loading: dashboardState.isLoading,
+                        error: dashboardState.hasError,
+                        items: dashboard?.pakistanToday ?? const [],
+                        onTap: () => context.push('/pakistan-live'),
+                        onRetry: () => ref.invalidate(homeDashboardProvider),
+                      ),
+                    ],
+                    if (visible(DashboardSection.upcoming)) ...[
+                      const SizedBox(height: 26),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _SectionHeading(
+                              context.l10n.phrase('Upcoming payments'),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => context.push('/recurring'),
+                            child: Text(context.l10n.phrase('View all')),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      _UpcomingPreview(
+                        items: dashboard?.upcomingCommitments ?? const [],
+                        hidden: privacy,
+                        money: _money,
+                        onTap: () => context.push('/recurring'),
+                      ),
+                    ],
+                    if (visible(DashboardSection.savings)) ...[
+                      const SizedBox(height: 26),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _SectionHeading(
+                              context.l10n.phrase('Savings goals'),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => context.push('/savings'),
+                            child: Text(context.l10n.phrase('View all')),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      _GoalsPreview(
+                        goals: dashboard?.savingsGoals ?? const [],
+                        hidden: privacy,
+                        money: _money,
+                        onTap: () => context.push('/savings'),
+                      ),
+                    ],
+                    if (visible(DashboardSection.recentActivity)) ...[
+                      const SizedBox(height: 26),
+                      _SectionHeading(
+                        context.l10n.phrase('Recent transactions'),
+                      ),
+                      const SizedBox(height: 12),
+                      _RecentTransactions(
+                        items: dashboard?.recentTransactions ?? const [],
+                        hidden: privacy,
+                        money: _money,
+                        onViewAll: () => context.push('/history'),
+                      ),
+                    ],
+                    if (visible(DashboardSection.tools)) ...[
+                      const SizedBox(height: 26),
+                      _SectionHeading(context.l10n.text('popularTools')),
+                      const SizedBox(height: 14),
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _tools.length,
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              mainAxisSpacing: 14,
+                              crossAxisSpacing: 14,
+                              childAspectRatio: 1.16,
+                            ),
                         itemBuilder: (context, index) {
-                          final action = _quickActions[index];
-                          return _QuickAction(
-                            label: context.l10n.phrase(action.$1),
-                            icon: action.$2,
-                            onTap: () {
-                              if (action.$3 == 'expense') {
-                                _openTransaction(
-                                  context,
-                                  ref,
-                                  TransactionType.expense,
-                                );
-                              } else if (action.$3 == 'income') {
-                                _openTransaction(
-                                  context,
-                                  ref,
-                                  TransactionType.income,
-                                );
-                              } else if (action.$3 == 'ai') {
-                                context.push('/markaz-ai');
-                              } else if (action.$3.startsWith('/tool/')) {
-                                context.push(action.$3);
-                              } else {
-                                context.go(action.$3);
-                              }
-                            },
+                          final tool = _tools[index];
+                          return _ToolCard(
+                            title: context.l10n.phrase(tool.$1),
+                            subtitle: context.l10n.phrase(tool.$2),
+                            icon: tool.$3,
+                            onTap: () => context.push('/tool/${tool.$4}'),
                           );
                         },
                       ),
-                    ),
-                    const SizedBox(height: 26),
-                    Card(
-                      child: ListTile(
-                        onTap: () => context.push('/markaz-ai'),
-                        leading: CircleAvatar(
-                          child: Text(score == null ? '—' : '${score.value}'),
-                        ),
-                        title: Text(context.l10n.phrase('Markaz Insight')),
-                        subtitle: Text(
-                          insights?.firstOrNull == null
-                              ? context.l10n.phrase(
-                                  "Keep using Mera Markaz and we'll show insights as your financial history grows.",
-                                )
-                              : (Localizations.localeOf(context).languageCode ==
-                                        'ur'
-                                    ? insights!.first.urduMessage
-                                    : insights!.first.message),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: const Icon(Icons.chevron_right),
-                      ),
-                    ),
-                    const SizedBox(height: 26),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _SectionHeading(
-                            context.l10n.phrase('Savings goals'),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () => context.push('/savings'),
-                          child: Text(context.l10n.phrase('View all')),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    _GoalsPreview(
-                      goals: dashboard?.savingsGoals ?? const [],
-                      hidden: privacy,
-                      money: _money,
-                      onTap: () => context.push('/savings'),
-                    ),
-                    const SizedBox(height: 26),
-                    _SectionHeading(context.l10n.phrase('Recent transactions')),
-                    const SizedBox(height: 12),
-                    _RecentTransactions(
-                      items: dashboard?.recentTransactions ?? const [],
-                      hidden: privacy,
-                      money: _money,
-                      onViewAll: () => context.push('/history'),
-                    ),
-                    const SizedBox(height: 26),
-                    _SectionHeading(context.l10n.text('popularTools')),
-                    const SizedBox(height: 14),
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _tools.length,
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            mainAxisSpacing: 14,
-                            crossAxisSpacing: 14,
-                            childAspectRatio: 1.16,
-                          ),
-                      itemBuilder: (context, index) {
-                        final tool = _tools[index];
-                        return _ToolCard(
-                          title: context.l10n.phrase(tool.$1),
-                          subtitle: context.l10n.phrase(tool.$2),
-                          icon: tool.$3,
-                          onTap: () => context.push('/tool/${tool.$4}'),
-                        );
-                      },
-                    ),
+                    ],
                   ],
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _PakistanTodayCard extends StatelessWidget {
+  const _PakistanTodayCard({
+    required this.loading,
+    required this.error,
+    required this.items,
+    required this.onTap,
+    required this.onRetry,
+  });
+
+  final bool loading;
+  final bool error;
+  final List<PakistanDataPoint> items;
+  final VoidCallback onTap;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    child: InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: loading
+            ? const SizedBox(
+                height: 72,
+                child: Center(child: CircularProgressIndicator()),
+              )
+            : error
+            ? Row(
+                children: [
+                  const Icon(Icons.cloud_off_outlined),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      context.l10n.phrase(
+                        'Could not refresh Pakistan data. Showing saved values.',
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: context.l10n.phrase('Refresh'),
+                    onPressed: onRetry,
+                    icon: const Icon(Icons.refresh_rounded),
+                  ),
+                ],
+              )
+            : Builder(
+                builder: (context) {
+                  final highlights = items
+                      .where(
+                        (item) => const {
+                          'usd_pkr',
+                          'gold_24k_tola',
+                          'petrol',
+                        }.contains(item.seriesKey),
+                      )
+                      .take(3)
+                      .toList();
+                  if (highlights.isEmpty) {
+                    return Row(
+                      children: [
+                        const Icon(Icons.public_rounded),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            context.l10n.phrase(
+                              'Open Pakistan Live for verified rates and economic updates.',
+                            ),
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right_rounded),
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      for (
+                        var index = 0;
+                        index < highlights.length;
+                        index++
+                      ) ...[
+                        if (index > 0) const SizedBox(width: 8),
+                        Expanded(
+                          child: _PakistanHighlight(item: highlights[index]),
+                        ),
+                      ],
+                    ],
+                  );
+                },
+              ),
+      ),
+    ),
+  );
+}
+
+class _PakistanHighlight extends StatelessWidget {
+  const _PakistanHighlight({required this.item});
+  final PakistanDataPoint item;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = switch (item.seriesKey) {
+      'usd_pkr' => 'USD / PKR',
+      'gold_24k_tola' => 'Gold 24K / Tola',
+      'petrol' => 'Petrol',
+      _ => item.seriesKey,
+    };
+    final stale =
+        item.freshness == DataFreshness.stale ||
+        item.freshness == DataFreshness.unavailable;
+    return Semantics(
+      label: '${context.l10n.phrase(label)} ${item.value} ${item.unit}',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.l10n.phrase(label),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelMedium,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            NumberFormat.decimalPattern('en_PK').format(item.value),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+          ),
+          Text(
+            context.l10n.phrase(
+              stale ? 'Stale' : _freshnessLabel(item.freshness),
+            ),
+            maxLines: 1,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: stale
+                  ? Theme.of(context).colorScheme.error
+                  : Theme.of(context).colorScheme.primary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _freshnessLabel(DataFreshness freshness) => switch (freshness) {
+  DataFreshness.current => 'Current',
+  DataFreshness.recentlyUpdated => 'Recently updated',
+  DataFreshness.cached => 'Cached',
+  DataFreshness.stale => 'Stale',
+  DataFreshness.unavailable => 'Unavailable',
+};
+
+class _SafeToSpendCard extends StatelessWidget {
+  const _SafeToSpendCard({
+    required this.value,
+    required this.commitments,
+    required this.reserve,
+    required this.isNegative,
+    required this.onConfigure,
+  });
+  final String value;
+  final String commitments;
+  final String reserve;
+  final bool isNegative;
+  final VoidCallback onConfigure;
+  @override
+  Widget build(BuildContext context) => Card(
+    child: InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: () => showModalBottomSheet<void>(
+        context: context,
+        showDragHandle: true,
+        builder: (sheetContext) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 4, 24, 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.l10n.phrase('How Safe to Spend works'),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  context.l10n.phrase(
+                    'Available balance minus upcoming essential payments and your safety reserve. This is guidance, not a guarantee.',
+                  ),
+                ),
+                const SizedBox(height: 18),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.event_outlined),
+                  title: Text(context.l10n.phrase('Upcoming commitments')),
+                  trailing: Text(commitments),
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.shield_outlined),
+                  title: Text(context.l10n.phrase('Safety reserve')),
+                  trailing: Text(reserve),
+                ),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.tonalIcon(
+                    onPressed: () {
+                      Navigator.pop(sheetContext);
+                      onConfigure();
+                    },
+                    icon: const Icon(Icons.tune),
+                    label: Text(context.l10n.phrase('Configure reserve')),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor:
+                  (isNegative
+                          ? Theme.of(context).colorScheme.error
+                          : AppColors.emerald)
+                      .withValues(alpha: .15),
+              child: Icon(
+                Icons.shield_outlined,
+                color: isNegative
+                    ? Theme.of(context).colorScheme.error
+                    : AppColors.emerald,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.l10n.phrase('Safe to Spend'),
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    context.l10n.phrase('After upcoming payments and reserve'),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              value,
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 17,
+                color: isNegative ? Theme.of(context).colorScheme.error : null,
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.chevron_right),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _UpcomingPreview extends StatelessWidget {
+  const _UpcomingPreview({
+    required this.items,
+    required this.hidden,
+    required this.money,
+    required this.onTap,
+  });
+  final List<RecurringTransaction> items;
+  final bool hidden;
+  final String Function(num, {bool hidden}) money;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return Card(
+        child: ListTile(
+          onTap: onTap,
+          leading: const Icon(Icons.event_available_outlined),
+          title: Text(context.l10n.phrase('No upcoming payments this month')),
+          subtitle: Text(
+            context.l10n.phrase(
+              'Add recurring bills or commitments to improve Safe to Spend.',
+            ),
+          ),
+          trailing: const Icon(Icons.add),
+        ),
+      );
+    }
+    return Card(
+      child: Column(
+        children: items
+            .take(3)
+            .map(
+              (item) => ListTile(
+                onTap: onTap,
+                leading: const Icon(Icons.event_outlined),
+                title: Text(
+                  item.description,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(DateFormat.yMMMd().format(item.nextDueAt)),
+                trailing: Text(
+                  money(item.amount, hidden: hidden),
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+            )
+            .toList(),
       ),
     );
   }

@@ -19,6 +19,7 @@ import javax.crypto.spec.GCMParameterSpec
 class MainActivity : FlutterFragmentActivity() {
     private companion object {
         const val CHANNEL = "pk.pakpocket.pakpocket/security_key"
+        const val WIDGET_CHANNEL = "pk.pakpocket.pakpocket/widgets"
         const val KEYSTORE = "AndroidKeyStore"
         const val TAG_BITS = 128
         const val TAG_BYTES = 16
@@ -48,6 +49,41 @@ class MainActivity : FlutterFragmentActivity() {
                 } catch (error: Exception) {
                     // Never include key bytes, plaintext, or provider exception details.
                     result.error("KEYSTORE_OPERATION_FAILED", "Secure key operation failed.", null)
+                }
+            }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, WIDGET_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                try {
+                    val preferences = getSharedPreferences("mera_markaz_widgets", MODE_PRIVATE)
+                    if (call.method == "load") {
+                        result.success(mapOf(
+                            "privacy" to preferences.getString("privacy", "hidden"),
+                            "theme" to preferences.getString("theme", "system"),
+                            "insight" to preferences.getString("insight", "safe_to_spend"),
+                            "market" to preferences.getString("market", "usd_pkr"),
+                            "quickActions" to preferences.getString("quickActions", "expense,udhaar,savings"),
+                        ))
+                        return@setMethodCallHandler
+                    }
+                    val values = call.arguments as? Map<*, *> ?: emptyMap<String, Any>()
+                    val editor = preferences.edit()
+                    values.forEach { (rawKey, rawValue) ->
+                        val key = rawKey as? String ?: return@forEach
+                        when (rawValue) {
+                            is Number -> editor.putFloat(key, rawValue.toFloat())
+                            is String -> editor.putString(key, rawValue)
+                            is Map<*, *> -> rawValue.forEach { (marketKey, marketValue) ->
+                                if (marketKey is String && marketValue is String) {
+                                    editor.putString("market_$marketKey", marketValue)
+                                }
+                            }
+                        }
+                    }
+                    editor.apply()
+                    MeraMarkazWidgets.updateAll(this)
+                    result.success(null)
+                } catch (_: Exception) {
+                    result.error("WIDGET_UPDATE_FAILED", "Widget settings could not be updated.", null)
                 }
             }
     }

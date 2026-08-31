@@ -150,13 +150,128 @@ class LedgerRepository {
     final status = paid >= entry.amount
         ? LedgerStatus.paid
         : LedgerStatus.partiallyPaid;
-    await _appDatabase.database.update(
-      'ledger_transactions',
-      {'paid_amount': paid, 'status': status.name},
-      where:
-          'id = ? AND person_id IN (SELECT id FROM ledger_people WHERE owner_id = ?)',
-      whereArgs: [entry.id, _appDatabase.ownerId],
+    await _appDatabase.database.transaction((txn) async {
+      await txn.update(
+        'ledger_transactions',
+        {'paid_amount': paid, 'status': status.name},
+        where:
+            'id = ? AND person_id IN (SELECT id FROM ledger_people WHERE owner_id = ?)',
+        whereArgs: [entry.id, _appDatabase.ownerId],
+      );
+      await txn.insert('ledger_payment_history', {
+        'ledger_transaction_id': entry.id,
+        'amount': payment,
+        'paid_at': DateTime.now().toIso8601String(),
+        'owner_id': _appDatabase.ownerId,
+      });
+      final installments = await txn.query(
+        'ledger_installments',
+        where: 'ledger_transaction_id = ? AND owner_id = ? AND status != ?',
+        whereArgs: [entry.id, _appDatabase.ownerId, 'paid'],
+        orderBy: 'installment_number',
+      );
+      var remaining = payment;
+      for (final row in installments) {
+        if (remaining <= 0) break;
+        final due = (row['amount'] as num).toDouble();
+        if (remaining >= due) {
+          await txn.update(
+            'ledger_installments',
+            {'status': 'paid', 'paid_at': DateTime.now().toIso8601String()},
+            where: 'id = ?',
+            whereArgs: [row['id']],
+          );
+          remaining -= due;
+        }
+      }
+    });
+  }
+
+  Future<List<LedgerPayment>> paymentHistory(int entryId) async {
+    final rows = await _appDatabase.database.query(
+      'ledger_payment_history',
+      where: 'ledger_transaction_id = ? AND owner_id = ?',
+      whereArgs: [entryId, _appDatabase.ownerId],
+      orderBy: 'paid_at DESC',
     );
+    return rows
+        .map(
+          (row) => LedgerPayment(
+            id: row['id'] as int,
+            amount: (row['amount'] as num).toDouble(),
+            paidAt: DateTime.parse(row['paid_at'] as String),
+            notes: row['notes'] as String?,
+          ),
+        )
+        .toList();
+  }
+
+  Future<void> createInstallmentPlan(
+    LedgerEntry entry, {
+    required int count,
+    required DateTime firstDue,
+  }) async {
+    if (count <= 0 || entry.remaining <= 0) {
+      throw const FormatException('Enter a valid installment plan.');
+    }
+    await _appDatabase.database.transaction((txn) async {
+      await txn.delete(
+        'ledger_installments',
+        where: 'ledger_transaction_id = ? AND owner_id = ?',
+        whereArgs: [entry.id, _appDatabase.ownerId],
+      );
+      final amount = entry.remaining / count;
+      for (var number = 1; number <= count; number++) {
+        await txn.insert('ledger_installments', {
+          'ledger_transaction_id': entry.id,
+          'installment_number': number,
+          'amount': amount,
+          'due_at': DateTime(
+            firstDue.year,
+            firstDue.month + number - 1,
+            firstDue.day.clamp(1, 28),
+          ).toIso8601String(),
+          'status': 'pending',
+          'owner_id': _appDatabase.ownerId,
+        });
+      }
+    });
+  }
+
+  Future<List<LedgerInstallment>> installments(int entryId) async {
+    final rows = await _appDatabase.database.query(
+      'ledger_installments',
+      where: 'ledger_transaction_id = ? AND owner_id = ?',
+      whereArgs: [entryId, _appDatabase.ownerId],
+      orderBy: 'installment_number',
+    );
+    return rows
+        .map(
+          (row) => LedgerInstallment(
+            id: row['id'] as int,
+            number: row['installment_number'] as int,
+            amount: (row['amount'] as num).toDouble(),
+            dueAt: DateTime.parse(row['due_at'] as String),
+            status: row['status'] as String,
+            paidAt: row['paid_at'] == null
+                ? null
+                : DateTime.parse(row['paid_at'] as String),
+          ),
+        )
+        .toList();
+  }
+
+  Future<void> addAttachment(int entryId, String path, String name) async {
+    if (path.trim().isEmpty) {
+      throw const FormatException('Choose a valid attachment.');
+    }
+    await _appDatabase.database.insert('ledger_attachments', {
+      'ledger_transaction_id': entryId,
+      'file_path': path,
+      'display_name': name.trim().isEmpty ? 'Attachment' : name.trim(),
+      'created_at': DateTime.now().toIso8601String(),
+      'owner_id': _appDatabase.ownerId,
+    });
   }
 
   Future<void> deletePerson(int id) => _appDatabase.database.delete(

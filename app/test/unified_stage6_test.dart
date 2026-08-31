@@ -9,6 +9,8 @@ import 'package:pakpocket/features/search/data/search_repository.dart';
 import 'package:pakpocket/features/search/domain/search_result.dart';
 import 'package:pakpocket/features/timeline/data/timeline_repository.dart';
 import 'package:pakpocket/features/timeline/domain/timeline_event.dart';
+import 'package:pakpocket/features/personal_finance/data/personal_finance_repository.dart';
+import 'package:pakpocket/features/personal_finance/domain/personal_finance_models.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
@@ -110,4 +112,25 @@ void main() {
       containsAll({SearchResultType.savingsGoal, SearchResultType.vehicle}),
     );
   });
+
+  test(
+    'unpaid bills appear in the financial calendar without posting expense',
+    () async {
+      await PersonalFinanceRepository(database).saveBill(
+        HouseholdBill(
+          type: 'Internet',
+          provider: 'Home ISP',
+          amount: 4500,
+          dueDate: DateTime(2026, 9, 10),
+          status: BillStatus.unpaid,
+        ),
+      );
+      final events = await TimelineRepository(
+        database,
+      ).events(const TimelineFilter());
+      expect(events.single.title, 'Home ISP');
+      expect(events.single.subtitle, 'Upcoming bill');
+      expect(await expenses.all(), isEmpty);
+    },
+  );
 }
