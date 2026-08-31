@@ -21,10 +21,10 @@ class TimelineRepository {
       SELECT event_id, event_type, title, subtitle, amount, event_date FROM (
         SELECT 'transaction:' || t.id event_id, t.type event_type,
           t.description title, c.name subtitle,
-          CASE WHEN t.type = 'income' THEN t.amount ELSE -t.amount END amount,
+          -t.amount amount,
           t.occurred_at event_date
         FROM transactions t JOIN categories c ON c.id = t.category_id
-        WHERE t.owner_id = ?
+        WHERE t.owner_id = ? AND t.type = 'expense'
         UNION ALL
         SELECT 'udhaar:' || l.id, 'udhaar', l.description, p.name,
           CASE WHEN l.direction = 'gave' THEN -l.amount ELSE l.amount END,
@@ -37,21 +37,9 @@ class TimelineRepository {
           -c.amount, c.contributed_at
         FROM goal_contributions c JOIN savings_goals g ON g.id = c.goal_id
         WHERE c.owner_id = ?
-        UNION ALL
-        SELECT 'bill:' || b.id, 'expense', b.provider, 'Upcoming bill',
-          -b.amount, b.due_date
-        FROM bills b
-        WHERE b.owner_id = ? AND b.status = 'unpaid'
       ) ORDER BY event_date DESC LIMIT ? OFFSET ?
       ''',
-      [
-        _database.ownerId,
-        _database.ownerId,
-        _database.ownerId,
-        _database.ownerId,
-        limit,
-        offset,
-      ],
+      [_database.ownerId, _database.ownerId, _database.ownerId, limit, offset],
     );
     final query = filter.query.trim().toLowerCase();
     return rows

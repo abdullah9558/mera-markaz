@@ -14,7 +14,7 @@ class SearchRepository {
     if (value.isEmpty) return const [];
     final pattern = '%${value.toLowerCase()}%';
     final transactions = await database.database.rawQuery(
-      '''SELECT t.description title, c.name subtitle, t.amount, t.occurred_at date FROM transactions t JOIN categories c ON c.id = t.category_id WHERE t.owner_id = ? AND (LOWER(t.description) LIKE ? OR LOWER(COALESCE(t.note, '')) LIKE ? OR LOWER(c.name) LIKE ?) ORDER BY t.occurred_at DESC LIMIT 50''',
+      '''SELECT t.description title, c.name subtitle, t.amount, t.occurred_at date FROM transactions t JOIN categories c ON c.id = t.category_id WHERE t.owner_id = ? AND t.type = 'expense' AND (LOWER(t.description) LIKE ? OR LOWER(COALESCE(t.note, '')) LIKE ? OR LOWER(c.name) LIKE ?) ORDER BY t.occurred_at DESC LIMIT 50''',
       [database.ownerId, pattern, pattern, pattern],
     );
     final people = await database.database.rawQuery(

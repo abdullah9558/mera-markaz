@@ -1281,4 +1281,28 @@ final urduPhrases = <String, String>{
   'Bill marked as paid.': 'بل ادا شدہ نشان لگا دیا گیا۔',
   'The bill could not be updated.': 'بل اپ ڈیٹ نہیں ہو سکا۔',
   'Loading notification settings': 'اطلاعات کی ترتیبات لوڈ ہو رہی ہیں',
+  'Add expense': 'خرچ شامل کریں',
+  'Could not load your dashboard. Pull down to try again.':
+      'ڈیش بورڈ لوڈ نہیں ہو سکا۔ دوبارہ کوشش کے لیے نیچے کھینچیں۔',
+  'Spent this month': 'اس ماہ کے اخراجات',
+  'Set a monthly budget to track your progress':
+      'اپنی پیش رفت دیکھنے کے لیے ماہانہ بجٹ مقرر کریں',
+  'Budget remaining': 'باقی بجٹ',
+  'Recent expenses': 'حالیہ اخراجات',
+  'No expenses yet. Add your first expense to get started.':
+      'ابھی کوئی خرچ نہیں۔ آغاز کے لیے پہلا خرچ شامل کریں۔',
+  'View history': 'ہسٹری دیکھیں',
+  'More': 'مزید',
+  'Guest': 'مہمان',
+  'Your data is stored on this device': 'آپ کا ڈیٹا اس ڈیوائس پر محفوظ ہے',
+  'Account and cloud sync enabled': 'اکاؤنٹ اور کلاؤڈ سنک فعال ہیں',
+  'MeraMarkaz version 1.0.0': 'میرا مرکز ورژن 1.0.0',
+  'Your expenses, budgets, Udhaar records, savings goals and saved calculations are stored locally on your device by default. You may use an account or continue offline. Account login may process your name, email address, provider identifier and basic provider profile. MeraMarkaz does not require CNIC, card details, contacts, SMS, call logs or location for its core features.':
+      'آپ کے اخراجات، بجٹ، ادھار ریکارڈ، بچت کے اہداف اور محفوظ حسابات بطور ڈیفالٹ آپ کے ڈیوائس پر محفوظ ہوتے ہیں۔ بنیادی فیچرز کے لیے شناختی کارڈ، کارڈ تفصیلات، رابطے، ایس ایم ایس، کال لاگز یا مقام درکار نہیں۔',
+  'You can export, restore or delete locally stored financial data from Settings. You can sign out or delete your account from the account controls.':
+      'آپ سیٹنگز سے مقامی مالی ڈیٹا برآمد، بحال یا حذف کر سکتے ہیں اور اکاؤنٹ کنٹرولز سے سائن آؤٹ یا اکاؤنٹ حذف کر سکتے ہیں۔',
+  'Tax, electricity, fuel and Zakat results are informational estimates. They are not official bills, tax advice, legal advice, financial advice or religious rulings.':
+      'ٹیکس، بجلی، ایندھن اور زکوٰۃ کے نتائج معلوماتی تخمینے ہیں؛ یہ سرکاری بل، ٹیکس، قانونی، مالی مشورہ یا مذہبی فتویٰ نہیں۔',
+  'This permanently removes expenses, budgets, Udhaar ledgers, savings goals, vehicles and saved calculations from this device. App preferences are retained. Export first if you need a copy.':
+      'یہ اخراجات، بجٹ، ادھار، بچت کے اہداف، گاڑیوں اور محفوظ حسابات کو مستقل طور پر حذف کر دے گا۔ اگر نقل چاہیے تو پہلے برآمد کریں۔',
 };

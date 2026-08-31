@@ -7,11 +7,8 @@ class ToolsScreen extends StatelessWidget {
   static const tools = [
     ('tax', Icons.account_balance),
     ('electricity', Icons.bolt),
-    ('solar', Icons.solar_power),
-    ('property', Icons.square_foot),
     ('fuel', Icons.local_gas_station),
     ('zakat', Icons.volunteer_activism),
-    ('smartFinance', Icons.auto_awesome_outlined),
   ];
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -32,11 +29,7 @@ class ToolsScreen extends StatelessWidget {
             ),
             trailing: Icon(Icons.chevron_right),
             onTap: () => context.push(
-              tool.$1 == 'fuel'
-                  ? '/vehicles'
-                  : tool.$1 == 'smartFinance'
-                  ? '/advanced'
-                  : '/tool/${tool.$1}',
+              tool.$1 == 'fuel' ? '/vehicles' : '/tool/${tool.$1}',
             ),
           ),
         );

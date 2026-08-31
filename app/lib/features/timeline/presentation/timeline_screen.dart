@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/localization/app_localizations.dart';
@@ -106,16 +105,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: Text(context.l10n.phrase('Financial timeline')),
-      actions: [
-        IconButton(
-          tooltip: context.l10n.phrase('Recurring transactions'),
-          onPressed: () => context.push('/recurring'),
-          icon: const Icon(Icons.autorenew_rounded),
-        ),
-      ],
-    ),
+    appBar: AppBar(title: Text(context.l10n.phrase('Financial timeline'))),
     body: Column(
       children: [
         Padding(

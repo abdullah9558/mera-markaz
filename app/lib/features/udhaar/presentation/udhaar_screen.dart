@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import '../data/ledger_repository.dart';
 import '../domain/ledger.dart';
 import '../../home/presentation/dashboard_provider.dart';
-import '../../../core/notifications/notification_service.dart';
 
 String _ledgerMoney(num value) =>
     'Rs. ${NumberFormat.decimalPattern('en_PK').format(value)}';
@@ -40,10 +39,8 @@ class _UdhaarScreenState extends ConsumerState<UdhaarScreen> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => _NewLedgerSheet(
-        repository: ref.read(ledgerRepositoryProvider),
-        notificationService: ref.read(notificationServiceProvider),
-      ),
+      builder: (_) =>
+          _NewLedgerSheet(repository: ref.read(ledgerRepositoryProvider)),
     );
     if (changed == true) refresh();
   }
@@ -203,7 +200,6 @@ class _LedgerDetailScreenState extends ConsumerState<LedgerDetailScreen> {
       builder: (_) => _NewLedgerSheet(
         repository: ref.read(ledgerRepositoryProvider),
         person: widget.person,
-        notificationService: ref.read(notificationServiceProvider),
       ),
     );
     if (changed == true) refresh();
@@ -495,13 +491,8 @@ class _LedgerDetailScreenState extends ConsumerState<LedgerDetailScreen> {
 }
 
 class _NewLedgerSheet extends StatefulWidget {
-  const _NewLedgerSheet({
-    required this.repository,
-    required this.notificationService,
-    this.person,
-  });
+  const _NewLedgerSheet({required this.repository, this.person});
   final LedgerRepository repository;
-  final NotificationService notificationService;
   final LedgerPerson? person;
   @override
   State<_NewLedgerSheet> createState() => _NewLedgerSheetState();
@@ -543,7 +534,7 @@ class _NewLedgerSheetState extends State<_NewLedgerSheet> {
     });
     try {
       if (widget.person == null) {
-        final personId = await widget.repository.create(
+        await widget.repository.create(
           name: name.text,
           phone: phone.text,
           direction: direction,
@@ -553,14 +544,6 @@ class _NewLedgerSheetState extends State<_NewLedgerSheet> {
           description: description.text,
           notes: notes.text,
         );
-        if (due != null) {
-          await widget.notificationService.scheduleUdhaarReminder(
-            id: personId,
-            personName: name.text.trim(),
-            amount: value,
-            dueDate: due!,
-          );
-        }
       } else {
         await widget.repository.addEntry(
           personId: widget.person!.id,
@@ -571,14 +554,6 @@ class _NewLedgerSheetState extends State<_NewLedgerSheet> {
           description: description.text,
           notes: notes.text,
         );
-        if (due != null) {
-          await widget.notificationService.scheduleUdhaarReminder(
-            id: Object.hash(widget.person!.id, due).abs(),
-            personName: widget.person!.name,
-            amount: value,
-            dueDate: due!,
-          );
-        }
       }
       if (mounted) Navigator.pop(context, true);
     } catch (e) {

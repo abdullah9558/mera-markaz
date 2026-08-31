@@ -12,7 +12,6 @@ import 'features/expenses/data/finance_export_service.dart';
 import 'features/auth/domain/auth_session.dart';
 import 'features/auth/presentation/auth_controller.dart';
 import 'firebase_options.dart';
-import 'features/advanced/data/receipt_repository.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,9 +21,6 @@ Future<void> main() async {
       ? await AutomaticLocalKeyService().databasePassword()
       : null;
   await database.open(encryptionPassword: databasePassword);
-  if (databasePassword != null) {
-    await ReceiptFileMigrationService(database).migrateLegacyFiles();
-  }
   AuthRepository authentication = const UnconfiguredAuthRepository();
   try {
     await Firebase.initializeApp(

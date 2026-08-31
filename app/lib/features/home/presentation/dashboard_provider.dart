@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/pakistan_data/pakistan_data_point.dart';
-import '../../../core/pakistan_data/pakistan_data_service.dart';
 
 import '../../analytics/data/financial_analytics_repository.dart';
 import '../../analytics/domain/financial_analytics.dart';
@@ -13,7 +12,6 @@ import '../../expenses/domain/budget_analytics.dart';
 import '../../expenses/domain/finance_transaction.dart';
 import '../../savings/data/savings_repository.dart';
 import '../../savings/domain/savings_goal.dart';
-import '../../recurring/data/recurring_repository.dart';
 import '../../recurring/domain/recurring_transaction.dart';
 import '../../udhaar/data/ledger_repository.dart';
 import '../../udhaar/domain/ledger.dart';
@@ -65,34 +63,23 @@ final homeDashboardProvider = FutureProvider<HomeDashboardData>((ref) async {
   final analytics = ref.watch(financialAnalyticsRepositoryProvider);
   final transactions = ref.watch(expenseRepositoryProvider);
   final budgets = ref.watch(budgetRepositoryProvider);
-  final recurring = await ref.watch(recurringRepositoryProvider).all();
-  final monthEnd = DateTime(now.year, now.month + 1);
-  final upcoming =
-      recurring
-          .where(
-            (item) =>
-                item.status == RecurringStatus.active &&
-                !item.nextDueAt.isBefore(
-                  DateTime(now.year, now.month, now.day),
-                ) &&
-                item.nextDueAt.isBefore(monthEnd),
-          )
-          .toList()
-        ..sort((a, b) => a.nextDueAt.compareTo(b.nextDueAt));
   return HomeDashboardData(
     finance: await analytics.monthlySummary(now),
     ledger: await ref.watch(ledgerRepositoryProvider).summary(),
     budget: await budgets.monthly(now),
     categories: await analytics.spendingByCategory(now),
     categoryBudgets: await budgets.categoryBudgets(now),
-    newBudgetAlerts: await budgets.evaluateThresholds(now),
+    newBudgetAlerts: const [],
     savingsGoals: (await ref.watch(savingsRepositoryProvider).goals())
         .take(3)
         .toList(),
-    recentTransactions: (await transactions.all()).take(5).toList(),
-    upcomingCommitments: upcoming,
-    reserve: ref.watch(safeToSpendReserveProvider),
-    pakistanToday: await ref.watch(pakistanDataServiceProvider).dashboard(),
+    recentTransactions: (await transactions.all())
+        .where((item) => item.type == TransactionType.expense)
+        .take(5)
+        .toList(),
+    upcomingCommitments: const [],
+    reserve: 0,
+    pakistanToday: const [],
   );
 });
 

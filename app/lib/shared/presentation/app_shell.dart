@@ -52,9 +52,12 @@ class _AppShellState extends State<AppShell> {
         Icons.account_balance_wallet,
         context.l10n.text('expenses'),
       ),
-      (Icons.handshake_outlined, Icons.handshake, context.l10n.text('udhaar')),
       (Icons.calculate_outlined, Icons.calculate, context.l10n.text('tools')),
-      (Icons.person_outline, Icons.person, context.l10n.text('profile')),
+      (
+        Icons.menu_rounded,
+        Icons.menu_open_rounded,
+        context.l10n.phrase('More'),
+      ),
     ];
     return PopScope<void>(
       canPop: false,

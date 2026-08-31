@@ -1,5 +1,4 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../domain/auth_session.dart';
 
@@ -58,29 +57,15 @@ class FirebaseAuthRepository implements AuthRepository {
     await _auth.signInWithCredential(credential);
   });
   @override
-  Future<void> signInWithFacebook() => _guard(() async {
-    final result = await FacebookAuth.instance.login(
-      permissions: const ['public_profile'],
-    );
-    if (result.status != LoginStatus.success || result.accessToken == null) {
-      throw AuthFailure(
-        'facebook-cancelled',
-        result.message ?? 'Facebook sign-in was cancelled.',
-      );
-    }
-    final credential = FacebookAuthProvider.credential(
-      result.accessToken!.tokenString,
-    );
-    await _auth.signInWithCredential(credential);
-  });
+  Future<void> signInWithFacebook() async => throw const AuthFailure(
+    'facebook-disabled',
+    'Facebook sign-in is not included in this release.',
+  );
   @override
   Future<void> signOut() async {
     await _auth.signOut();
     try {
       await GoogleSignIn.instance.signOut();
-    } catch (_) {}
-    try {
-      await FacebookAuth.instance.logOut();
     } catch (_) {}
   }
 

@@ -58,7 +58,7 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
         title: Text(context.l10n.phrase('Delete all financial data?')),
         content: Text(
           context.l10n.phrase(
-            'This permanently removes expenses, income, budgets, Udhaar ledgers, vehicles and saved calculations from this device. App preferences are retained. Export first if you need a copy.',
+            'This permanently removes expenses, budgets, Udhaar ledgers, savings goals, vehicles and saved calculations from this device. App preferences are retained. Export first if you need a copy.',
           ),
         ),
         actions: [

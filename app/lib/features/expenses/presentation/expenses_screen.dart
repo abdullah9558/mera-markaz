@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../../core/localization/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../../core/theme/app_theme.dart';
 import '../data/expense_repository.dart';
 import '../domain/finance_transaction.dart';
 import '../../home/presentation/dashboard_provider.dart';
@@ -24,7 +23,12 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
 
   Future<(FinanceSummary, List<FinanceTransaction>)> _load() async {
     final repo = ref.read(expenseRepositoryProvider);
-    return (await repo.summary(), await repo.all());
+    return (
+      await repo.summary(),
+      (await repo.all())
+          .where((item) => item.type == TransactionType.expense)
+          .toList(),
+    );
   }
 
   void _refresh() {
@@ -47,7 +51,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(context.l10n.phrase('Expenses & Income')),
+      title: Text(context.l10n.phrase('Expenses')),
       actions: [
         IconButton(
           tooltip: context.l10n.phrase('Budgets & Analytics'),
@@ -62,7 +66,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
     floatingActionButton: FloatingActionButton.extended(
       onPressed: _open,
       icon: Icon(Icons.add),
-      label: Text(context.l10n.phrase('Add transaction')),
+      label: Text(context.l10n.phrase('Add expense')),
     ),
     body: FutureBuilder<(FinanceSummary, List<FinanceTransaction>)>(
       future: data,
@@ -87,21 +91,9 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                       padding: EdgeInsets.all(18),
                       child: Column(
                         children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _Summary(
-                                  label: 'Monthly income',
-                                  value: money(summary.monthIncome),
-                                ),
-                              ),
-                              Expanded(
-                                child: _Summary(
-                                  label: 'Monthly expenses',
-                                  value: money(summary.monthExpense),
-                                ),
-                              ),
-                            ],
+                          _Summary(
+                            label: 'Monthly expenses',
+                            value: money(summary.monthExpense),
                           ),
                           Divider(height: 28),
                           Row(
@@ -116,12 +108,6 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                                 child: _Summary(
                                   label: 'This week',
                                   value: money(summary.weekExpense),
-                                ),
-                              ),
-                              Expanded(
-                                child: _Summary(
-                                  label: 'Balance',
-                                  value: money(summary.balance),
                                 ),
                               ),
                             ],
@@ -145,19 +131,16 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                     separatorBuilder: (_, _) => SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       final item = items[index];
-                      final income = item.type == TransactionType.income;
                       return Card(
                         child: ListTile(
                           onTap: () => _open(item),
                           leading: CircleAvatar(
-                            backgroundColor: income
-                                ? AppColors.emerald.withValues(alpha: .14)
-                                : Theme.of(context).colorScheme.errorContainer,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.errorContainer,
                             child: Icon(
-                              income ? Icons.south_west : Icons.north_east,
-                              color: income
-                                  ? AppColors.emerald
-                                  : Theme.of(context).colorScheme.error,
+                              Icons.north_east,
+                              color: Theme.of(context).colorScheme.error,
                             ),
                           ),
                           title: Text(
@@ -173,12 +156,10 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                '${income ? '+' : '-'}${money(item.amount)}',
+                                '-${money(item.amount)}',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: income
-                                      ? AppColors.emerald
-                                      : Theme.of(context).colorScheme.error,
+                                  color: Theme.of(context).colorScheme.error,
                                 ),
                               ),
                               PopupMenuButton<String>(
@@ -296,7 +277,7 @@ class _TransactionSheetState extends State<TransactionSheet> {
   void initState() {
     super.initState();
     final value = widget.initial;
-    type = value?.type ?? widget.initialType;
+    type = TransactionType.expense;
     date = value?.occurredAt ?? DateTime.now();
     amount = TextEditingController(
       text: value == null ? '' : value.amount.toString(),
@@ -383,9 +364,7 @@ class _TransactionSheetState extends State<TransactionSheet> {
             Expanded(
               child: Text(
                 context.l10n.phrase(
-                  widget.initial == null
-                      ? 'Add transaction'
-                      : 'Edit transaction',
+                  widget.initial == null ? 'Add expense' : 'Edit expense',
                 ),
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
@@ -399,26 +378,6 @@ class _TransactionSheetState extends State<TransactionSheet> {
           ],
         ),
         SizedBox(height: 12),
-        SegmentedButton<TransactionType>(
-          segments: [
-            ButtonSegment(
-              value: TransactionType.expense,
-              label: Text(context.l10n.phrase('Expense')),
-              icon: Icon(Icons.north_east),
-            ),
-            ButtonSegment(
-              value: TransactionType.income,
-              label: Text(context.l10n.phrase('Income')),
-              icon: Icon(Icons.south_west),
-            ),
-          ],
-          selected: {type},
-          onSelectionChanged: (value) {
-            setState(() => type = value.first);
-            _loadCategories();
-          },
-        ),
-        SizedBox(height: 14),
         TextField(
           controller: amount,
           keyboardType: TextInputType.numberWithOptions(decimal: true),

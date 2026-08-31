@@ -175,9 +175,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           onGoogle: () => ref
                               .read(authControllerProvider.notifier)
                               .google(),
-                          onFacebook: () => ref
-                              .read(authControllerProvider.notifier)
-                              .facebook(),
                           onGuest: () => ref
                               .read(authControllerProvider.notifier)
                               .continueOffline(),
@@ -199,9 +196,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           onGoogle: () => ref
                               .read(authControllerProvider.notifier)
                               .google(),
-                          onFacebook: () => ref
-                              .read(authControllerProvider.notifier)
-                              .facebook(),
                           onGuest: widget.allowGuest
                               ? () => ref
                                     .read(authControllerProvider.notifier)
@@ -241,14 +235,12 @@ class _LandingCard extends StatelessWidget {
     required this.onEmail,
     required this.onSignup,
     required this.onGoogle,
-    required this.onFacebook,
     required this.onGuest,
   });
   final bool busy;
   final VoidCallback onEmail;
   final VoidCallback onSignup;
   final VoidCallback onGoogle;
-  final VoidCallback onFacebook;
   final VoidCallback onGuest;
 
   @override
@@ -264,17 +256,6 @@ class _LandingCard extends StatelessWidget {
           ),
           icon: const GoogleBrandMark(size: 24),
           label: Text(context.l10n.phrase('Continue with Google')),
-        ),
-        const SizedBox(height: 12),
-        OutlinedButton.icon(
-          onPressed: busy ? null : onFacebook,
-          style: OutlinedButton.styleFrom(
-            backgroundColor: const Color(0xFF1877F2),
-            foregroundColor: Colors.white,
-            side: const BorderSide(color: Color(0xFF1877F2)),
-          ),
-          icon: const FacebookBrandMark(size: 25, inverse: true),
-          label: Text(context.l10n.phrase('Continue with Facebook')),
         ),
         const SizedBox(height: 12),
         FilledButton.icon(
@@ -318,7 +299,6 @@ class _AuthForm extends StatelessWidget {
     required this.onSubmit,
     required this.onToggleMode,
     required this.onGoogle,
-    required this.onFacebook,
     this.onGuest,
     this.onBiometric,
   });
@@ -335,7 +315,6 @@ class _AuthForm extends StatelessWidget {
   final VoidCallback onSubmit;
   final VoidCallback onToggleMode;
   final VoidCallback onGoogle;
-  final VoidCallback onFacebook;
   final VoidCallback? onGuest;
   final Future<void> Function()? onBiometric;
 
@@ -446,16 +425,6 @@ class _AuthForm extends StatelessWidget {
             onPressed: busy ? null : onGoogle,
             icon: const GoogleBrandMark(size: 24),
             label: Text(context.l10n.phrase('Google')),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: busy ? null : onFacebook,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF1877F2),
-              side: const BorderSide(color: Color(0xFF1877F2)),
-            ),
-            icon: const FacebookBrandMark(size: 25),
-            label: Text(context.l10n.phrase('Facebook')),
           ),
           if (onGuest != null) ...[
             const SizedBox(height: 20),

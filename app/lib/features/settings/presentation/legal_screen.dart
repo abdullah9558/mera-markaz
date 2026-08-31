@@ -41,29 +41,7 @@ class LegalScreen extends StatelessWidget {
             SizedBox(height: 8),
             Text(
               context.l10n.phrase(
-                'Your expenses, income, Udhaar records and saved calculations are stored locally on your device by default. You may use an account or continue offline. Account login may process your name, email address, provider identifier and basic provider profile. MeraMarkaz does not require CNIC, card details, contacts, SMS, call logs or location for its core features.',
-              ),
-            ),
-            SizedBox(height: 18),
-            Text(
-              context.l10n.phrase('Optional services'),
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Text(
-              context.l10n.phrase(
-                'Online Markaz AI is optional. After you provide separate consent, a limited financial summary may be processed by Google Gemini to provide personalized financial assistance. Passwords, authentication tokens, contact details, notes, receipts and complete transaction records are excluded. Guest mode and local answers do not send financial information to Gemini.',
-              ),
-            ),
-            SizedBox(height: 18),
-            Text(
-              context.l10n.phrase('AI limitations'),
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Text(
-              context.l10n.phrase(
-                'Gemini responses are generated for informational purposes and may be incomplete or inaccurate. They are not financial, tax, legal or religious advice.',
+                'Your expenses, budgets, Udhaar records, savings goals and saved calculations are stored locally on your device by default. You may use an account or continue offline. Account login may process your name, email address, provider identifier and basic provider profile. MeraMarkaz does not require CNIC, card details, contacts, SMS, call logs or location for its core features.',
               ),
             ),
             SizedBox(height: 18),
@@ -74,7 +52,7 @@ class LegalScreen extends StatelessWidget {
             SizedBox(height: 8),
             Text(
               context.l10n.phrase(
-                'You can export or delete locally stored financial data from Settings. You can withdraw online-AI consent at any time from the Markaz AI privacy dialog without deleting local conversation history.',
+                'You can export, restore or delete locally stored financial data from Settings. You can sign out or delete your account from the account controls.',
               ),
             ),
           ] else ...[
@@ -85,7 +63,7 @@ class LegalScreen extends StatelessWidget {
             SizedBox(height: 8),
             Text(
               context.l10n.phrase(
-                'Tax, electricity, solar, property, fuel and Zakat results are informational estimates. They are not official bills, tax advice, legal advice, financial advice or religious rulings.',
+                'Tax, electricity, fuel and Zakat results are informational estimates. They are not official bills, tax advice, legal advice, financial advice or religious rulings.',
               ),
             ),
             SizedBox(height: 18),
