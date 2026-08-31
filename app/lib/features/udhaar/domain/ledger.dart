@@ -55,3 +55,32 @@ class LedgerSummary {
   final double toReceive;
   final double toPay;
 }
+
+class LedgerPayment {
+  const LedgerPayment({
+    required this.id,
+    required this.amount,
+    required this.paidAt,
+    this.notes,
+  });
+  final int id;
+  final double amount;
+  final DateTime paidAt;
+  final String? notes;
+}
+
+class LedgerInstallment {
+  const LedgerInstallment({
+    required this.id,
+    required this.number,
+    required this.amount,
+    required this.dueAt,
+    required this.status,
+    this.paidAt,
+  });
+  final int id, number;
+  final double amount;
+  final DateTime dueAt;
+  final String status;
+  final DateTime? paidAt;
+}

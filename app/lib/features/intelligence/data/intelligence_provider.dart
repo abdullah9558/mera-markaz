@@ -1,24 +1,29 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../home/presentation/dashboard_provider.dart';
 import '../../analytics/data/financial_analytics_repository.dart';
-import '../../expenses/data/budget_repository.dart';
-import '../../savings/data/savings_repository.dart';
 import '../../udhaar/data/ledger_repository.dart';
 import '../domain/financial_intelligence.dart';
 
 final intelligenceSnapshotProvider = FutureProvider<IntelligenceSnapshot>((
   ref,
 ) async {
+  final dashboard = await ref.watch(homeDashboardProvider.future);
   final now = DateTime.now();
-  final analytics = ref.watch(financialAnalyticsRepositoryProvider);
   return IntelligenceSnapshot(
-    period: await analytics.monthlySummary(now),
-    categories: await analytics.spendingByCategory(now),
-    categoryBudgets: await ref
-        .watch(budgetRepositoryProvider)
-        .categoryBudgets(now),
-    ledger: await ref.watch(ledgerRepositoryProvider).summary(),
-    goals: await ref.watch(savingsRepositoryProvider).goals(),
+    period: dashboard.finance,
+    categories: dashboard.categories,
+    categoryBudgets: dashboard.categoryBudgets,
+    ledger: dashboard.ledger,
+    goals: dashboard.savingsGoals,
+    safeToSpend: dashboard.safeToSpend,
+    upcomingCommitments: dashboard.upcomingTotal,
+    reserve: dashboard.reserve,
+    pakistanIndicators: dashboard.pakistanToday,
+    ledgerPeople: await ref.watch(ledgerRepositoryProvider).people(),
+    previousCategories: await ref
+        .watch(financialAnalyticsRepositoryProvider)
+        .spendingByCategory(DateTime(now.year, now.month - 1)),
   );
 });
 
@@ -73,13 +78,29 @@ Map<String, Object?> safeAiSummary(IntelligenceSnapshot snapshot) {
       'toReceive': snapshot.ledger.toReceive,
       'toPay': snapshot.ledger.toPay,
     },
-    'savingsGoals': snapshot.goals
+    'savingsGoals': snapshot.goals.indexed
         .take(5)
         .map(
-          (goal) => {
-            'name': goal.name,
-            'target': goal.targetAmount,
-            'saved': goal.savedAmount,
+          (entry) => {
+            'goalNumber': entry.$1 + 1,
+            'target': entry.$2.targetAmount,
+            'saved': entry.$2.savedAmount,
+          },
+        )
+        .toList(),
+    'safeToSpend': snapshot.safeToSpend,
+    'upcomingCommitments': snapshot.upcomingCommitments,
+    'safetyReserve': snapshot.reserve,
+    'pakistanIndicators': snapshot.pakistanIndicators
+        .take(10)
+        .map(
+          (point) => {
+            'series': point.seriesKey,
+            'value': point.value,
+            'unit': point.unit,
+            'source': point.sourceName,
+            'effectiveAt': point.effectiveAt.toIso8601String(),
+            'freshness': point.freshness.name,
           },
         )
         .toList(),
