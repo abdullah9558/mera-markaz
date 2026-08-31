@@ -16,13 +16,15 @@ class MarkazAiScreen extends ConsumerStatefulWidget {
 
 class _MarkazAiScreenState extends ConsumerState<MarkazAiScreen> {
   static const _suggestions = [
-    'Analyze my spending',
+    'How much did I spend this month?',
+    'Can I afford Rs. 50,000 this month?',
+    'What payments are coming up?',
     'Compare this month',
     'Where can I save?',
-    'Show my biggest expenses',
+    'Which category increased most?',
     'Check my budget',
     'Summarize my Udhaar',
-    'Analyze my fuel spending',
+    'What is the USD rate?',
   ];
   final _question = TextEditingController();
   int? _conversationId;

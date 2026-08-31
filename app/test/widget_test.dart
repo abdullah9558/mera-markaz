@@ -5,6 +5,9 @@ import 'package:pakpocket/app.dart';
 import 'package:pakpocket/core/database/app_database.dart';
 import 'package:pakpocket/features/analytics/domain/financial_analytics.dart';
 import 'package:pakpocket/features/home/presentation/dashboard_provider.dart';
+import 'package:pakpocket/features/home/data/dashboard_layout_repository.dart';
+import 'package:pakpocket/features/intelligence/data/intelligence_provider.dart';
+import 'package:pakpocket/features/intelligence/domain/financial_intelligence.dart';
 import 'package:pakpocket/features/udhaar/domain/ledger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -30,6 +33,7 @@ void main() {
       ProviderScope(
         overrides: [
           appDatabaseProvider.overrideWithValue(database),
+          androidHomeBackgroundSyncProvider.overrideWithValue(false),
           homeDashboardProvider.overrideWith(
             (ref) async => HomeDashboardData(
               finance: FinancialPeriodSummary(
@@ -46,6 +50,25 @@ void main() {
               recentTransactions: const [],
             ),
           ),
+          dashboardLayoutProvider.overrideWith(
+            (ref) async => [
+              for (
+                var index = 0;
+                index < DashboardSection.values.length;
+                index++
+              )
+                DashboardSectionPreference(
+                  section: DashboardSection.values[index],
+                  position: index,
+                  visible: true,
+                ),
+            ],
+          ),
+          financialInsightsProvider.overrideWith((ref) async => const []),
+          markazScoreProvider.overrideWith(
+            (ref) async =>
+                const MarkazScore(value: 0, factors: [], improvements: []),
+          ),
         ],
         child: const PakPocketApp(),
       ),
@@ -57,6 +80,11 @@ void main() {
     await pumpApp(tester);
     expect(find.text('Assalam-o-Alaikum'), findsOneWidget);
     expect(find.text('Rs. 0'), findsWidgets);
+    await tester.scrollUntilVisible(
+      find.text('Quick actions'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Quick actions'), findsOneWidget);
   });
 
@@ -75,8 +103,11 @@ void main() {
 
   testWidgets('salary tax quick action performs a calculation', (tester) async {
     await pumpApp(tester);
-    await tester.drag(find.byType(CustomScrollView), const Offset(0, -140));
-    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Calculate Tax'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(
       find.ancestor(
         of: find.text('Calculate Tax'),

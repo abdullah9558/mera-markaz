@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -36,6 +38,8 @@ class NotificationService {
   NotificationService({FlutterLocalNotificationsPlugin? plugin})
     : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
   final FlutterLocalNotificationsPlugin _plugin;
+  final StreamController<String> _routes = StreamController.broadcast();
+  Stream<String> get routeSelections => _routes.stream;
   bool initialized = false;
   Future<void> initialize() async {
     if (initialized) return;
@@ -45,7 +49,18 @@ class NotificationService {
       const InitializationSettings(
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       ),
+      onDidReceiveNotificationResponse: (response) {
+        final route = response.payload;
+        if (route != null && route.startsWith('/')) _routes.add(route);
+      },
     );
+    final launch = await _plugin.getNotificationAppLaunchDetails();
+    final launchRoute = launch?.notificationResponse?.payload;
+    if (launch?.didNotificationLaunchApp == true &&
+        launchRoute != null &&
+        launchRoute.startsWith('/')) {
+      scheduleMicrotask(() => _routes.add(launchRoute));
+    }
     initialized = true;
   }
 
@@ -86,6 +101,72 @@ class NotificationService {
           visibility: NotificationVisibility.private,
         ),
       ),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+    );
+  }
+
+  Future<void> showAlert({
+    required int id,
+    required String channelId,
+    required String channelName,
+    required String title,
+    required String body,
+    String? payload,
+    bool highPriority = false,
+  }) async {
+    await initialize();
+    await _plugin.show(
+      id,
+      title,
+      body,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          channelId,
+          channelName,
+          importance: highPriority
+              ? Importance.high
+              : Importance.defaultImportance,
+          priority: highPriority ? Priority.high : Priority.defaultPriority,
+          visibility: NotificationVisibility.private,
+        ),
+      ),
+      payload: payload,
+    );
+  }
+
+  Future<void> scheduleAlert({
+    required int id,
+    required String channelId,
+    required String channelName,
+    required String title,
+    required String body,
+    required DateTime deliverAt,
+    String? payload,
+  }) async {
+    await initialize();
+    if (!deliverAt.isAfter(DateTime.now())) {
+      return showAlert(
+        id: id,
+        channelId: channelId,
+        channelName: channelName,
+        title: title,
+        body: body,
+        payload: payload,
+      );
+    }
+    await _plugin.zonedSchedule(
+      id,
+      title,
+      body,
+      tz.TZDateTime.from(deliverAt, tz.local),
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          channelId,
+          channelName,
+          visibility: NotificationVisibility.private,
+        ),
+      ),
+      payload: payload,
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
     );
   }
