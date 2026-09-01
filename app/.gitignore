@@ -32,6 +32,8 @@ migrate_working_dir/
 .pub/
 /build/
 /releases/*.apk
+/releases/*.aab
+/releases/*.pem
 /coverage/
 
 # Symbolication related
