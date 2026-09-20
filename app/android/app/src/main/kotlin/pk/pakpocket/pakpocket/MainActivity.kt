@@ -2,8 +2,6 @@ package pk.pakpocket.pakpocket
 
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
-import android.os.Bundle
-import android.view.WindowManager
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.plugin.common.MethodCall
@@ -23,11 +21,6 @@ class MainActivity : FlutterFragmentActivity() {
         const val KEYSTORE = "AndroidKeyStore"
         const val TAG_BITS = 128
         const val TAG_BYTES = 16
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {

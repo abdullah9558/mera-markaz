@@ -652,10 +652,10 @@ class _ProfileHero extends StatelessWidget {
               backgroundColor: Theme.of(
                 context,
               ).colorScheme.surfaceContainerHigh,
-              backgroundImage: profile?.photoUrl?.isNotEmpty == true
-                  ? NetworkImage(profile!.photoUrl!)
+              backgroundImage: profile?.photoUrl?.trim().isNotEmpty == true
+                  ? NetworkImage(profile!.photoUrl!.trim())
                   : null,
-              child: profile?.photoUrl?.isNotEmpty == true
+              child: profile?.photoUrl?.trim().isNotEmpty == true
                   ? null
                   : const Icon(
                       Icons.account_circle_outlined,

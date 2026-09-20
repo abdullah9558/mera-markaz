@@ -31,8 +31,19 @@ class V1MoreScreen extends ConsumerWidget {
         children: [
           Card(
             child: ListTile(
-              leading: const CircleAvatar(child: Icon(Icons.person_rounded)),
-              title: Text(user?.displayName ?? context.l10n.phrase('Guest')),
+              leading: CircleAvatar(
+                backgroundImage: profile?.photoUrl?.trim().isNotEmpty == true
+                    ? NetworkImage(profile!.photoUrl!.trim())
+                    : null,
+                child: profile?.photoUrl?.trim().isNotEmpty == true
+                    ? null
+                    : const Icon(Icons.person_rounded),
+              ),
+              title: Text(
+                profile?.fullName.trim().isNotEmpty == true
+                    ? profile!.fullName.trim()
+                    : user?.displayName ?? context.l10n.phrase('Guest'),
+              ),
               subtitle: Text(
                 guest
                     ? context.l10n.phrase('Your data is stored on this device')

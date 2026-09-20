@@ -14,11 +14,27 @@
       },
       "oauth_client": [
         {
+          "client_id": "773756309489-00ki6tohtnj76ls6a5o271k43c53mjoe.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "pk.pakpocket.pakpocket",
+            "certificate_hash": "e434e9f4b028364851bf5946e544b10dd1b15c4d"
+          }
+        },
+        {
           "client_id": "773756309489-shpnem1u0n0eilv6b22fnmaju766nbt7.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "pk.pakpocket.pakpocket",
             "certificate_hash": "9fa55c7ab09fbc4d53c38989587d34e3ea6f8588"
+          }
+        },
+        {
+          "client_id": "773756309489-uev689qave5ldno2v71ts4c60sae0ucn.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "pk.pakpocket.pakpocket",
+            "certificate_hash": "bf0b359c7c3ba443c5fdabde92f2e9a579adb9fc"
           }
         },
         {

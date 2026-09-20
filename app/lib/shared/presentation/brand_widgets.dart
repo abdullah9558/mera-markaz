@@ -14,8 +14,6 @@ class BrandMark extends StatelessWidget {
     height: size,
     fit: BoxFit.contain,
     filterQuality: FilterQuality.high,
-    color: AppColors.emerald,
-    colorBlendMode: BlendMode.srcIn,
     semanticLabel: 'MeraMarkaz',
   );
 }

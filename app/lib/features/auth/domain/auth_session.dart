@@ -46,7 +46,6 @@ abstract interface class AuthRepository {
   Future<void> signUpWithEmail(String name, String email, String password);
   Future<void> resetPassword(String email);
   Future<void> signInWithGoogle();
-  Future<void> signInWithFacebook();
   Future<void> signOut();
 }
 

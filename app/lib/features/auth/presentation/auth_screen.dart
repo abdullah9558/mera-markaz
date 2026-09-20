@@ -170,6 +170,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   landing
                       ? _LandingCard(
                           busy: state.busy,
+                          error: state.error,
                           onEmail: () => _showForm(false),
                           onSignup: () => _showForm(true),
                           onGoogle: () => ref
@@ -232,12 +233,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 class _LandingCard extends StatelessWidget {
   const _LandingCard({
     required this.busy,
+    required this.error,
     required this.onEmail,
     required this.onSignup,
     required this.onGoogle,
     required this.onGuest,
   });
   final bool busy;
+  final String? error;
   final VoidCallback onEmail;
   final VoidCallback onSignup;
   final VoidCallback onGoogle;
@@ -257,6 +260,18 @@ class _LandingCard extends StatelessWidget {
           icon: const GoogleBrandMark(size: 24),
           label: Text(context.l10n.phrase('Continue with Google')),
         ),
+        if (busy) ...[
+          const SizedBox(height: 14),
+          const Center(child: CircularProgressIndicator()),
+        ],
+        if (error != null) ...[
+          const SizedBox(height: 14),
+          Text(
+            context.l10n.phrase(error!),
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+        ],
         const SizedBox(height: 12),
         FilledButton.icon(
           onPressed: busy ? null : onEmail,
@@ -495,31 +510,5 @@ class GoogleBrandMark extends StatelessWidget {
     fit: BoxFit.contain,
     filterQuality: FilterQuality.high,
     semanticLabel: context.l10n.phrase('Google'),
-  );
-}
-
-class FacebookBrandMark extends StatelessWidget {
-  const FacebookBrandMark({super.key, this.size = 24, this.inverse = false});
-  final double size;
-  final bool inverse;
-  @override
-  Widget build(BuildContext context) => Container(
-    width: size,
-    height: size,
-    alignment: Alignment.bottomCenter,
-    decoration: BoxDecoration(
-      color: inverse ? Colors.white : const Color(0xFF1877F2),
-      shape: BoxShape.circle,
-    ),
-    child: Text(
-      context.l10n.phrase('f'),
-      style: TextStyle(
-        color: inverse ? const Color(0xFF1877F2) : Colors.white,
-        fontSize: size * .94,
-        height: .93,
-        fontWeight: FontWeight.w900,
-        fontFamily: 'Arial',
-      ),
-    ),
   );
 }

@@ -26,9 +26,16 @@ class UserProfileController extends AsyncNotifier<UserProfile> {
     }
     final stored = await ref.read(profileRepositoryProvider).load(user.id);
     if (stored != null) {
+      final providerName = user.displayName?.trim() ?? '';
+      final providerPhoto = user.photoUrl?.trim() ?? '';
       final refreshed = stored.copyWith(
         email: stored.email.isEmpty ? user.email ?? '' : stored.email,
-        photoUrl: stored.photoUrl ?? user.photoUrl,
+        fullName: stored.fullName.trim().isEmpty && providerName.isNotEmpty
+            ? providerName
+            : stored.fullName,
+        photoUrl: providerPhoto.isNotEmpty
+            ? providerPhoto
+            : stored.photoUrl,
       );
       if (refreshed.toJson().toString() != stored.toJson().toString()) {
         await ref.read(profileRepositoryProvider).save(refreshed);

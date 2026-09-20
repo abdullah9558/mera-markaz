@@ -141,11 +141,6 @@ class AuthController extends Notifier<AuthSession> {
     return _run(() => ref.read(authRepositoryProvider).signInWithGoogle());
   }
 
-  Future<void> facebook() {
-    _claimGuestData = false;
-    return _run(() => ref.read(authRepositoryProvider).signInWithFacebook());
-  }
-
   Future<void> reset(String email) => _run(
     () => ref.read(authRepositoryProvider).resetPassword(email),
     success: 'Password reset email sent.',

@@ -31,7 +31,23 @@ class HomeScreen extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    const BrandMark(size: 46),
+                    InkWell(
+                      onTap: () => context.go('/more'),
+                      borderRadius: BorderRadius.circular(24),
+                      child: CircleAvatar(
+                        radius: 23,
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
+                        backgroundImage:
+                            profile?.photoUrl?.trim().isNotEmpty == true
+                            ? NetworkImage(profile!.photoUrl!.trim())
+                            : null,
+                        child: profile?.photoUrl?.trim().isNotEmpty == true
+                            ? null
+                            : const BrandMark(size: 34),
+                      ),
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(

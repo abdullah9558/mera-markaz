@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">MeraMarkaz</string>
-    <string name="facebook_app_id">2181693702749329</string>
-    <string name="facebook_client_token">816dd49636ac6ea639a736ecf46d5ea9</string>
-    <string name="fb_login_protocol_scheme">fb2181693702749329</string>
     <string name="widget_money_description">Private monthly money snapshot</string>
     <string name="widget_financial_description">Budget, Safe to Spend, Udhaar or savings</string>
     <string name="widget_pakistan_description">Selected Pakistan Live indicator</string>

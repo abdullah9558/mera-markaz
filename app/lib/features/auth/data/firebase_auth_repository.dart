@@ -20,7 +20,7 @@ class FirebaseAuthRepository implements AuthRepository {
   );
   @override
   Stream<AuthUser?> sessionChanges() =>
-      _auth.authStateChanges().map((user) => user == null ? null : _map(user));
+      _auth.userChanges().map((user) => user == null ? null : _map(user));
   @override
   Future<void> signInWithEmail(String email, String password) => _guard(
     () => _auth.signInWithEmailAndPassword(
@@ -54,13 +54,20 @@ class FirebaseAuthRepository implements AuthRepository {
     final credential = GoogleAuthProvider.credential(
       idToken: authentication.idToken,
     );
-    await _auth.signInWithCredential(credential);
+    final userCredential = await _auth.signInWithCredential(credential);
+    final user = userCredential.user;
+    if (user != null) {
+      if ((user.displayName?.trim().isEmpty ?? true) &&
+          (account.displayName?.trim().isNotEmpty ?? false)) {
+        await user.updateDisplayName(account.displayName!.trim());
+      }
+      if ((user.photoURL?.trim().isEmpty ?? true) &&
+          (account.photoUrl?.trim().isNotEmpty ?? false)) {
+        await user.updatePhotoURL(account.photoUrl);
+      }
+      await user.reload();
+    }
   });
-  @override
-  Future<void> signInWithFacebook() async => throw const AuthFailure(
-    'facebook-disabled',
-    'Facebook sign-in is not included in this release.',
-  );
   @override
   Future<void> signOut() async {
     await _auth.signOut();
@@ -119,8 +126,6 @@ class UnconfiguredAuthRepository implements AuthRepository {
   Future<void> resetPassword(String email) async => _unavailable();
   @override
   Future<void> signInWithGoogle() async => _unavailable();
-  @override
-  Future<void> signInWithFacebook() async => _unavailable();
   @override
   Future<void> signOut() async {}
 }
