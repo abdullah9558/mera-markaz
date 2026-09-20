@@ -7,10 +7,10 @@
   },
   "scripts": {
     "sync:app": "node scripts/sync-from-app.mjs",
-    "dev": "node scripts/sync-from-app.mjs && next dev",
-    "dev:sync": "node scripts/watch-app.mjs",
+    "dev": "node api.js && node scripts/sync-from-app.mjs && next dev",
+    "dev:sync": "node api.js && node scripts/watch-app.mjs",
     "build": "node scripts/sync-from-app.mjs && next build",
-    "start": "next start",
+    "start": "node api.js && next start",
     "lint": "oxlint",
     "format": "oxfmt"
   },
