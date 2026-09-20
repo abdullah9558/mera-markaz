@@ -1,14 +1,41 @@
 import type { Metadata } from 'next';
 import { DocumentShell } from '@/components/document-shell';
+
 export const metadata: Metadata = { title: 'Privacy policy' };
-const sections=[{id:'overview',label:'Overview'},{id:'collect',label:'Information handled'},{id:'use',label:'How it is used'},{id:'ai',label:'Online AI'},{id:'sharing',label:'Service providers'},{id:'control',label:'Your controls'},{id:'security',label:'Security'},{id:'contact',label:'Contact'}];
-export default function Privacy(){return <DocumentShell kicker="Effective 29 August 2026" title="Privacy policy" intro="This policy explains how Mera Markaz handles information when you use the Android app and this website." sections={sections}>
-<section id="overview"><h2>Overview</h2><p>Mera Markaz is a personal finance and utility application published by Logivyre Labs. It is designed to keep guest activity local and provide authenticated users with optional account, encrypted synchronisation and online AI services.</p></section>
-<section id="collect"><h2>Information we handle</h2><ul><li><strong>Account information:</strong> name, email address, profile details and provider identifier when you use email, Google or Facebook sign-in.</li><li><strong>Financial records you enter:</strong> expenses, income, categories, budgets, savings, recurring items, reminders and related preferences.</li><li><strong>App and device information:</strong> app version, language, notification settings, security status and limited diagnostic information needed to operate and protect the service.</li><li><strong>Support information:</strong> details you choose to include when contacting support.</li></ul></section>
-<section id="use"><h2>How information is used</h2><p>Information is used to provide app features, restore signed-in accounts, secure requests, calculate user-requested results, improve reliability, send enabled local notifications and answer support requests. We do not sell personal information.</p></section>
-<section id="ai"><h2>Optional online AI</h2><p>Local assistant answers remain on the phone. Online Gemini is optional and is used only for eligible signed-in users after explicit consent. A limited financial summary and the question are sent for personalised assistance. Passwords, tokens, identity-document numbers, payment-card details and complete financial records are excluded. Consent can be withdrawn in the app. Gemini output is informational and may be inaccurate.</p></section>
-<section id="sharing"><h2>Service providers</h2><p>Mera Markaz uses service providers such as Google Firebase for authentication, app protection and supported synchronisation; Google Gemini for consented online AI; and Meta for Facebook sign-in. Each provider processes information needed to deliver its service under its own terms and privacy practices.</p></section>
-<section id="control"><h2>Your controls</h2><ul><li>Use guest mode for local-only activity.</li><li>Disable online AI and continue with local answers.</li><li>Edit profile information and notification preferences.</li><li>Sign out, remove local guest activity, or request account deletion.</li></ul></section>
-<section id="security"><h2>Security and retention</h2><p>We use encryption, authenticated access and app-integrity controls appropriate to the service. No system is completely risk-free. Local guest information remains until the session is ended or app data is removed. Account information is retained while needed to provide the service or meet legal and security obligations, then deleted or de-identified as appropriate.</p></section>
-<section id="contact"><h2>Contact</h2><p>For privacy questions or requests, use the support details published on the Mera Markaz Google Play listing or the <a className="text-link" href="/support">support page</a>. Confirm that your public support mailbox is active before publishing this policy.</p></section>
-</DocumentShell>}
+
+const sections = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'collect', label: 'Information handled' },
+  { id: 'use', label: 'How it is used' },
+  { id: 'sharing', label: 'Service providers' },
+  { id: 'control', label: 'Your controls' },
+  { id: 'security', label: 'Security and retention' },
+  { id: 'contact', label: 'Contact' },
+];
+
+export default function Privacy() {
+  return <DocumentShell
+    kicker="Effective 20 September 2026"
+    title="Privacy policy"
+    intro="This policy describes the Mera Markaz V1 Android app and this website."
+    sections={sections}
+  >
+    <section id="overview"><h2>Overview</h2><p>Mera Markaz is a personal finance and utility app published by Logivyre Labs. You can use guest mode without an account, or create an account to use signed-in features. The V1 app does not display ads or offer online AI.</p></section>
+    <section id="collect"><h2>Information we handle</h2><ul>
+      <li><strong>Account and profile:</strong> your name, email address, optional profile photo and authentication-provider identifier when you sign in with email or Google.</li>
+      <li><strong>Information you enter:</strong> expenses, budgets, savings goals, informal debt ledgers and payments, plus calculator inputs and app preferences.</li>
+      <li><strong>Technical information:</strong> limited app, device and security information needed for authentication, app protection, synchronisation and service reliability.</li>
+      <li><strong>Support:</strong> the information you choose to include in feedback or support requests.</li>
+    </ul></section>
+    <section id="use"><h2>How information is used</h2><p>We use this information to provide your requested features, maintain an account when you choose to create one, protect the service, synchronise eligible signed-in data, and respond to support requests. Guest financial activity is stored on your device. We do not sell your personal information.</p></section>
+    <section id="sharing"><h2>Service providers</h2><p>Google Firebase provides account authentication, app protection and supported encrypted synchronisation. Google Sign-In is available when you choose it. These providers process the information needed to deliver those services under their own privacy terms. V1 does not send financial summaries to an online AI service.</p></section>
+    <section id="control"><h2>Your controls</h2><ul>
+      <li>Continue as a guest and keep financial activity on the device.</li>
+      <li>Choose whether to create an account and use signed-in synchronisation.</li>
+      <li>Edit your profile, export or restore a local encrypted backup, and manage app preferences.</li>
+      <li>Sign out or request deletion of your account and associated data. See the <a className="text-link" href="/account-deletion">account-deletion instructions</a>.</li>
+    </ul></section>
+    <section id="security"><h2>Security and retention</h2><p>Financial data is protected with local encryption, and eligible signed-in records use encrypted synchronisation. No security measure is perfect. Guest data remains on the device until you sign into an existing account, log out, clear app storage or uninstall the app; creating a new account from guest mode can attach that activity to the new account. Account data is retained while needed to provide the service or meet security and legal obligations, and account deletion can be requested from the app or through support.</p></section>
+    <section id="contact"><h2>Contact</h2><p>For privacy questions or account requests, email <a className="text-link" href="mailto:muhammadabdullah9558@gmail.com">muhammadabdullah9558@gmail.com</a>. Never send passwords or verification codes.</p></section>
+  </DocumentShell>;
+}
