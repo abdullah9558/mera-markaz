@@ -1,5 +1,4 @@
 import 'financial_intelligence.dart';
-import '../../../core/pakistan_data/pakistan_data_point.dart';
 
 class AiConversation {
   const AiConversation({
@@ -33,6 +32,10 @@ abstract interface class ExternalAiGateway {
     required String prompt,
     required Map<String, Object?> data,
   });
+  Stream<String> sendStream({
+    required String prompt,
+    required Map<String, Object?> data,
+  });
 }
 
 class DisabledExternalAiGateway implements ExternalAiGateway {
@@ -44,6 +47,11 @@ class DisabledExternalAiGateway implements ExternalAiGateway {
     required String prompt,
     required Map<String, Object?> data,
   }) => throw StateError('External AI backend is not configured.');
+  @override
+  Stream<String> sendStream({
+    required String prompt,
+    required Map<String, Object?> data,
+  }) => Stream.error(StateError('External AI backend is not configured.'));
 }
 
 class LocalMarkazQueryEngine {
@@ -56,6 +64,29 @@ class LocalMarkazQueryEngine {
   }) {
     final normalized = question.toLowerCase();
     String money(double value) => 'Rs. ${value.toStringAsFixed(0)}';
+    if (_containsAny(normalized, const [
+      'your name',
+      'who are you',
+      'what are you',
+      'apka naam',
+      'tumhara naam',
+      'aap ka naam',
+      'آپ کا نام',
+      'تم کون ہو',
+      'آپ کون ہیں',
+    ])) {
+      return urdu
+          ? 'میں مرکز اے آئی (Markaz AI) ہوں، میرا مرکز کا مالی معاون۔ میں آپ کے اخراجات، بجٹ، ادھار، بچت اور پاکستان کے مالی اشاریوں کے بارے میں مدد کر سکتا ہوں۔'
+          : 'I am Markaz AI, the financial assistant inside MeraMarkaz. I can help with your spending, budgets, Udhaar, savings, and Pakistan financial indicators.';
+    }
+    if (RegExp(
+      r'^(hi|hello|hey|salam|salaam|assalam[\w\s]*|اسلام علیکم|السلام علیکم|سلام)[!.\s?]*$',
+      caseSensitive: false,
+    ).hasMatch(normalized.trim())) {
+      return urdu
+          ? 'السلام علیکم! میں مرکز اے آئی ہوں۔ آپ مجھ سے اپنے اخراجات، بجٹ، ادھار، بچت یا پاکستان لائیو ریٹس کے بارے میں پوچھ سکتے ہیں۔'
+          : 'Hello! I am Markaz AI. You can ask me about your spending, budgets, Udhaar, savings, or Pakistan Live rates.';
+    }
     if (_containsAny(normalized, const [
       'can i afford',
       'afford',
@@ -114,8 +145,17 @@ class LocalMarkazQueryEngine {
           ? 'اس ماہ ریکارڈ شدہ کل خرچ ${money(snapshot.period.expenses)} ہے۔'
           : 'Your recorded spending this month is ${money(snapshot.period.expenses)}.';
     }
-    final indicator = _indicatorFor(normalized, snapshot.pakistanIndicators);
-    if (indicator != null) {
+    final requestedIndicatorKey = _indicatorKeyFor(normalized);
+    if (requestedIndicatorKey != null) {
+      final indicator = snapshot.pakistanIndicators
+          .where((point) => point.seriesKey == requestedIndicatorKey)
+          .firstOrNull;
+      if (indicator == null) {
+        final label = _indicatorLabel(requestedIndicatorKey);
+        return urdu
+            ? '$label کی تازہ قدر ابھی مقامی طور پر محفوظ نہیں ہے۔ تازہ ریٹس کے لیے پاکستان لائیو کھول کر ریفریش کریں۔'
+            : 'No cached $label rate is available locally yet. Open Pakistan Live to refresh the latest rates.';
+      }
       final freshness = indicator.freshness.name.replaceAllMapped(
         RegExp(r'([A-Z])'),
         (match) => ' ${match.group(1)!.toLowerCase()}',
@@ -226,12 +266,9 @@ class LocalMarkazQueryEngine {
           ? 'اس ماہ ریکارڈ شدہ بچت ${money(snapshot.period.savings)} ہے، یعنی آمدنی کا ${(snapshot.period.savingsRate * 100).toStringAsFixed(0)}%۔'
           : 'Recorded savings this month are ${money(snapshot.period.savings)}, or ${(snapshot.period.savingsRate * 100).toStringAsFixed(0)}% of income.';
     }
-    if (snapshot.period.income == 0 && snapshot.period.expenses == 0) {
-      return _insufficient(urdu);
-    }
     return urdu
-        ? 'میں خرچ، بجٹ، ایندھن، ادھار اور بچت کے بارے میں مقامی طور پر جواب دے سکتا ہوں۔'
-        : 'I can answer local questions about spending, income, budgets, affordability, upcoming payments, fuel, Udhaar, savings and Pakistan indicators.';
+        ? 'میں خرچ، بجٹ، ایندھن، ادھار، بچت اور پاکستان لائیو ریٹس کے بارے میں جواب دے سکتا ہوں۔'
+        : 'I can answer questions about spending, income, budgets, affordability, upcoming payments, fuel, Udhaar, savings and Pakistan indicators.';
   }
 
   bool _containsAny(String value, List<String> terms) =>
@@ -243,10 +280,7 @@ class LocalMarkazQueryEngine {
     return double.tryParse(matches.last.group(1)!.replaceAll(',', ''));
   }
 
-  PakistanDataPoint? _indicatorFor(
-    String question,
-    List<PakistanDataPoint> points,
-  ) {
+  String? _indicatorKeyFor(String question) {
     const aliases = <String, List<String>>{
       'usd_pkr': ['usd', 'dollar', 'ڈالر'],
       'aed_pkr': ['aed', 'dirham', 'درہم'],
@@ -259,9 +293,7 @@ class LocalMarkazQueryEngine {
     };
     for (final entry in aliases.entries) {
       if (entry.value.any(question.contains)) {
-        for (final point in points) {
-          if (point.seriesKey == entry.key) return point;
-        }
+        return entry.key;
       }
     }
     return null;

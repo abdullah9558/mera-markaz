@@ -10,6 +10,7 @@ import 'core/theme/app_theme.dart';
 import 'core/notifications/notification_service.dart';
 import 'features/auth/presentation/auth_gate.dart';
 import 'features/settings/presentation/settings_controller.dart';
+import 'shared/presentation/animated_splash.dart';
 
 class PakPocketApp extends ConsumerStatefulWidget {
   const PakPocketApp({super.key});
@@ -61,7 +62,9 @@ class _PakPocketAppState extends ConsumerState<PakPocketApp> {
             boldText: media.boldText,
             highContrast: media.highContrast,
           ),
-          child: AuthGate(child: child ?? const SizedBox.shrink()),
+          child: AnimatedSplash(
+            child: AuthGate(child: child ?? const SizedBox.shrink()),
+          ),
         );
       },
     );

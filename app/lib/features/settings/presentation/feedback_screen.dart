@@ -141,9 +141,29 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                   floatingLabelAlignment: FloatingLabelAlignment.start,
                   contentPadding: const EdgeInsetsDirectional.fromSTEB(
                     18,
-                    20,
                     18,
                     18,
+                    18,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: BorderSide(color: colors.outlineVariant),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: BorderSide(color: colors.secondary, width: 1.6),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: BorderSide(color: colors.error),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: BorderSide(color: colors.error, width: 1.6),
                   ),
                   labelText: context.l10n.phrase('Your message'),
                   hintText: context.l10n.phrase(

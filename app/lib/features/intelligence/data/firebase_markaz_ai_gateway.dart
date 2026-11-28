@@ -29,17 +29,44 @@ class FirebaseMarkazAiGateway implements ExternalAiGateway {
     required Map<String, Object?> data,
   }) async {
     final response = await _model
-        .generateContent([
-          Content.text(
-            'Financial summary: ${jsonEncode(data)}\nUser question: $prompt',
-          ),
-        ])
-        .timeout(const Duration(seconds: 12));
+        .generateContent([Content.text(_buildUserContent(prompt, data))])
+        .timeout(const Duration(seconds: 30));
     final answer = response.text?.trim();
     if (answer == null || answer.isEmpty) {
       throw StateError('Gemini returned an empty response.');
     }
     return answer;
+  }
+
+  @override
+  Stream<String> sendStream({
+    required String prompt,
+    required Map<String, Object?> data,
+  }) async* {
+    final stream = _model
+        .generateContentStream([Content.text(_buildUserContent(prompt, data))])
+        .timeout(const Duration(seconds: 30));
+    var receivedAny = false;
+    await for (final chunk in stream) {
+      final text = chunk.text;
+      if (text != null && text.isNotEmpty) {
+        receivedAny = true;
+        yield text;
+      }
+    }
+    if (!receivedAny) {
+      throw StateError('Gemini returned an empty response.');
+    }
+  }
+
+  String _buildUserContent(String prompt, Map<String, Object?> data) {
+    final compact = <String, Object?>{};
+    data.forEach((key, value) {
+      if (value == null) return;
+      if (value is List && value.isEmpty) return;
+      compact[key] = value;
+    });
+    return 'Financial summary: ${jsonEncode(compact)}\nUser question: $prompt';
   }
 
   static const _systemInstruction = '''

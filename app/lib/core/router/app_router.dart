@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../network/alice_inspector.dart';
 import '../../features/expenses/presentation/expenses_screen.dart';
 import '../../features/auth/presentation/auth_controller.dart';
 import '../../features/home/presentation/home_screen.dart';
@@ -32,6 +33,7 @@ import '../../shared/presentation/calculator_screen.dart';
 final appRouterProvider = Provider<GoRouter>((ref) {
   ref.watch(authControllerProvider.select((state) => state.user?.id));
   return GoRouter(
+    navigatorKey: appNavigatorKey,
     initialLocation: '/',
     routes: [
       StatefulShellRoute.indexedStack(

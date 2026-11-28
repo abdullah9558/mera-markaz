@@ -26,6 +26,14 @@ class PakistanDataService {
   static final Uri _silverEndpoint = Uri.parse(
     'https://api.gold-api.com/price/XAG',
   );
+  static final Uri _psoFuelEndpoint = Uri.parse(
+    'https://psopk.com/en/fuels/fuel-prices',
+  );
+  static final Uri _economyEndpoint = Uri.parse(
+    'https://tradingeconomics.com/pakistan/indicators',
+  );
+  static const _browserUserAgent =
+      'Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36';
   static const _gramsPerTola = 11.6638038;
   static const _gramsPerTroyOunce = 31.1034768;
   static const _exchangeCurrencies = <String>[
@@ -75,7 +83,7 @@ class PakistanDataService {
         // keyless currency feed keeps Pakistan Live useful in that situation.
       }
     }
-    return _refreshExchangeRates();
+    return _refreshDirectFeeds();
   }
 
   Future<int> _refreshFromAdapter() async {
@@ -98,7 +106,59 @@ class PakistanDataService {
     return _storePayload(decoded['data'] as List);
   }
 
-  Future<int> _refreshExchangeRates() async {
+  Future<int> _refreshDirectFeeds() async {
+    final retrievedAt = DateTime.now().toUtc();
+    final payload = <Map<String, Object?>>[];
+
+    final exchangeFuture = _exchangePayload(retrievedAt);
+    final fuelFuture = _safePayload(() => _fuelPayload(retrievedAt));
+    final economyFuture = _safePayload(() => _economyPayload(retrievedAt));
+
+    double? pkrPerUsd;
+    try {
+      final exchangeResult = await exchangeFuture;
+      payload.addAll(exchangeResult.items);
+      pkrPerUsd = exchangeResult.pkrPerUsd;
+    } catch (_) {
+      // Keep refreshing Fuel and Economy even if exchange rates fail.
+    }
+
+    final metalsFuture = pkrPerUsd != null
+        ? _safePayload(
+            () => _metalPayload(
+              pkrPerUsd: pkrPerUsd!,
+              retrievedAt: retrievedAt,
+            ),
+          )
+        : Future.value(const <Map<String, Object?>>[]);
+
+    final extraPayloads = await Future.wait([
+      metalsFuture,
+      fuelFuture,
+      economyFuture,
+    ]);
+    for (final batch in extraPayloads) {
+      payload.addAll(batch);
+    }
+
+    if (payload.isEmpty) {
+      throw const HttpException('All Pakistan Live feeds are currently unreachable.');
+    }
+    return _storePayload(payload);
+  }
+
+  Future<List<Map<String, Object?>>> _safePayload(
+    Future<List<Map<String, Object?>>> Function() loader,
+  ) async {
+    try {
+      return await loader();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<({double pkrPerUsd, List<Map<String, Object?>> items})>
+  _exchangePayload(DateTime retrievedAt) async {
     final request = await _client.getUrl(_exchangeEndpoint);
     request.headers.set(HttpHeaders.acceptHeader, 'application/json');
     final response = await request.close().timeout(const Duration(seconds: 12));
@@ -116,7 +176,6 @@ class PakistanDataService {
     if (pkr is! num || pkr <= 0) {
       throw const FormatException('PKR rate is unavailable.');
     }
-    final retrievedAt = DateTime.now().toUtc();
     final updateSeconds = decoded['time_last_update_unix'];
     final effectiveAt = updateSeconds is num
         ? DateTime.fromMillisecondsSinceEpoch(
@@ -124,11 +183,11 @@ class PakistanDataService {
             isUtc: true,
           )
         : retrievedAt;
-    final payload = <Map<String, Object?>>[];
+    final items = <Map<String, Object?>>[];
     for (final currency in _exchangeCurrencies) {
       final currencyRate = rates[currency];
       if (currencyRate is! num || currencyRate <= 0) continue;
-      payload.add({
+      items.add({
         'seriesKey': '${currency.toLowerCase()}_pkr',
         'value': pkr.toDouble() / currencyRate.toDouble(),
         'unit': 'PKR',
@@ -139,50 +198,179 @@ class PakistanDataService {
         'configVersion': 'exchange-open-v1',
       });
     }
-    try {
-      payload.addAll(
-        await _metalPayload(
-          pkrPerUsd: pkr.toDouble(),
-          retrievedAt: retrievedAt,
-        ),
-      );
-    } catch (_) {
-      // Currency data remains useful when a precious-metal feed is down.
-    }
-    return _storePayload(payload);
+    return (pkrPerUsd: pkr.toDouble(), items: items);
   }
 
   Future<List<Map<String, Object?>>> _metalPayload({
     required double pkrPerUsd,
     required DateTime retrievedAt,
   }) async {
-    final responses = await Future.wait([
-      _readJson(_goldEndpoint),
-      _readJson(_silverEndpoint),
-    ]);
-    final output = <Map<String, Object?>>[];
-    for (var index = 0; index < responses.length; index++) {
-      final response = responses[index];
-      final price = response['price'];
-      if (price is! num || price <= 0) continue;
-      final effectiveAt =
-          DateTime.tryParse('${response['updatedAt']}') ?? retrievedAt;
-      final perTolaPkr =
-          price.toDouble() * (_gramsPerTola / _gramsPerTroyOunce) * pkrPerUsd;
-      final isGold = index == 0;
-      output.add({
-        'seriesKey': isGold ? 'gold_24k_tola' : 'silver_tola',
-        'value': perTolaPkr,
-        'unit': 'PKR',
-        'sourceName': 'Gold-API international spot estimate',
-        'sourceReference': (isGold ? _goldEndpoint : _silverEndpoint)
-            .toString(),
-        'effectiveAt': effectiveAt.toUtc().toIso8601String(),
+    final entries = <({String seriesKey, Uri uri})>[
+      (seriesKey: 'gold_24k_tola', uri: _goldEndpoint),
+      (seriesKey: 'silver_tola', uri: _silverEndpoint),
+    ];
+    final results = await Future.wait(
+      entries.map((entry) async {
+        try {
+          final response = await _readJson(entry.uri);
+          final price = response['price'];
+          if (price is! num || price <= 0) return null;
+          final effectiveAt =
+              DateTime.tryParse('${response['updatedAt']}') ?? retrievedAt;
+          final perTolaPkr =
+              price.toDouble() *
+              (_gramsPerTola / _gramsPerTroyOunce) *
+              pkrPerUsd;
+          return <String, Object?>{
+            'seriesKey': entry.seriesKey,
+            'value': perTolaPkr,
+            'unit': 'PKR',
+            'sourceName': 'Gold-API international spot estimate',
+            'sourceReference': entry.uri.toString(),
+            'effectiveAt': effectiveAt.toUtc().toIso8601String(),
+            'retrievedAt': retrievedAt.toIso8601String(),
+            'configVersion': 'metal-spot-pkr-v1',
+          };
+        } catch (_) {
+          return null;
+        }
+      }),
+    );
+    return results.whereType<Map<String, Object?>>().toList();
+  }
+
+  Future<List<Map<String, Object?>>> _fuelPayload(DateTime retrievedAt) async {
+    final html = await _readText(_psoFuelEndpoint);
+    final text = _plainText(html);
+    final items = <Map<String, Object?>>[];
+
+    final petrol = _firstNumber(
+      text,
+      RegExp(
+        r'(?:PREMIER\s+EURO\s*5|Motor\s+Spirit|Petrol)\s*(?:Rs\.?\s*)?([0-9]+(?:\.[0-9]+)?)\s*/\s*Ltr',
+        caseSensitive: false,
+      ),
+    );
+    if (petrol != null) {
+      items.add({
+        'seriesKey': 'petrol',
+        'value': petrol,
+        'unit': 'PKR/Ltr',
+        'sourceName': 'Pakistan State Oil (PSO)',
+        'sourceReference': _psoFuelEndpoint.toString(),
+        'effectiveAt': retrievedAt.toIso8601String(),
         'retrievedAt': retrievedAt.toIso8601String(),
-        'configVersion': 'metal-spot-pkr-v1',
+        'configVersion': 'pso-fuel-v1',
       });
     }
-    return output;
+
+    final diesel = _firstNumber(
+      text,
+      RegExp(
+        r'(?:HI-CETANE\s+DIESEL\s+EURO\s*5|High\s+Speed\s+Diesel|HSD)\s*(?:Rs\.?\s*)?([0-9]+(?:\.[0-9]+)?)\s*/\s*Ltr',
+        caseSensitive: false,
+      ),
+    );
+    if (diesel != null) {
+      items.add({
+        'seriesKey': 'diesel',
+        'value': diesel,
+        'unit': 'PKR/Ltr',
+        'sourceName': 'Pakistan State Oil (PSO)',
+        'sourceReference': _psoFuelEndpoint.toString(),
+        'effectiveAt': retrievedAt.toIso8601String(),
+        'retrievedAt': retrievedAt.toIso8601String(),
+        'configVersion': 'pso-fuel-v1',
+      });
+    }
+    return items;
+  }
+
+  Future<List<Map<String, Object?>>> _economyPayload(
+    DateTime retrievedAt,
+  ) async {
+    final html = await _readText(_economyEndpoint);
+    final text = _plainText(html);
+    final items = <Map<String, Object?>>[];
+
+    void addIndicator({
+      required String seriesKey,
+      required String labelPattern,
+      required String unit,
+    }) {
+      final match = RegExp(
+        '\\b$labelPattern\\s+([0-9,.]+)\\s+([0-9,.]+)',
+        caseSensitive: false,
+      ).firstMatch(text);
+      if (match == null) return;
+      final value = double.tryParse(match.group(1)!.replaceAll(',', ''));
+      if (value == null || value <= 0) return;
+      final previous = double.tryParse(match.group(2)!.replaceAll(',', ''));
+      items.add({
+        'seriesKey': seriesKey,
+        'value': value,
+        'previousValue': (previous != null && previous > 0) ? previous : null,
+        'unit': unit,
+        'sourceName': 'Trading Economics (SBP / PBS)',
+        'sourceReference': _economyEndpoint.toString(),
+        'effectiveAt': retrievedAt.toIso8601String(),
+        'retrievedAt': retrievedAt.toIso8601String(),
+        'configVersion': 'te-economy-v1',
+      });
+    }
+
+    addIndicator(
+      seriesKey: 'sbp_policy_rate',
+      labelPattern: r'Interest\s+Rate',
+      unit: '%',
+    );
+    addIndicator(
+      seriesKey: 'kibor_3m',
+      labelPattern: r'Interbank\s+Rate',
+      unit: '%',
+    );
+    addIndicator(
+      seriesKey: 'inflation_cpi',
+      labelPattern: r'Inflation\s+Rate',
+      unit: '%',
+    );
+    addIndicator(
+      seriesKey: 'forex_reserves',
+      labelPattern: r'Foreign\s+Exchange\s+Reserves',
+      unit: 'USD million',
+    );
+    return items;
+  }
+
+  Future<String> _readText(Uri uri) async {
+    final request = await _client.getUrl(uri);
+    request.headers.set(HttpHeaders.userAgentHeader, _browserUserAgent);
+    request.headers.set(
+      HttpHeaders.acceptHeader,
+      'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    );
+    request.headers.set(HttpHeaders.acceptLanguageHeader, 'en-US,en;q=0.9');
+    final response = await request.close().timeout(const Duration(seconds: 12));
+    if (response.statusCode != HttpStatus.ok) {
+      throw HttpException('Data source failed (${response.statusCode}).');
+    }
+    return utf8.decoder.bind(response).join();
+  }
+
+  String _plainText(String html) => html
+      .replaceAll(RegExp(r'<script[\s\S]*?</script>', caseSensitive: false), ' ')
+      .replaceAll(RegExp(r'<style[\s\S]*?</style>', caseSensitive: false), ' ')
+      .replaceAll(RegExp(r'<[^>]+>'), ' ')
+      .replaceAll(RegExp(r'&nbsp;|&#160;', caseSensitive: false), ' ')
+      .replaceAll('&amp;', '&')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+
+  double? _firstNumber(String text, RegExp expression) {
+    final match = expression.firstMatch(text);
+    if (match == null) return null;
+    final value = double.tryParse(match.group(1)!.replaceAll(',', ''));
+    return (value != null && value > 0) ? value : null;
   }
 
   Future<Map<String, Object?>> _readJson(Uri uri) async {

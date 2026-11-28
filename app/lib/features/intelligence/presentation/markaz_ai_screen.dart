@@ -27,16 +27,64 @@ class _MarkazAiScreenState extends ConsumerState<MarkazAiScreen> {
     'What is the USD rate?',
   ];
   final _question = TextEditingController();
+  final _scrollController = ScrollController();
   int? _conversationId;
   String _conversationTitle = 'New chat';
   List<AiChatMessage> _messages = const [];
+  String? _streamingReply;
   bool _sending = false;
+  bool _onlineMode = false;
+  bool? _consentGrantedCache;
   final _aiConsent = AiPrivacyConsent();
 
   @override
   void initState() {
     super.initState();
     _loadConversation();
+    _loadAiMode();
+    // Pre-warm the financial snapshot so the first prompt doesn't wait on SQLite.
+    ref.read(intelligenceSnapshotProvider);
+  }
+
+  Future<void> _loadAiMode() async {
+    final granted = await _aiConsent.granted();
+    final auth = ref.read(authControllerProvider);
+    final user = auth.user;
+    final gateway = ref.read(externalAiGatewayProvider);
+    final available = user != null && !user.isGuest && gateway.configured;
+    if (!mounted) return;
+    setState(() {
+      _consentGrantedCache = granted;
+      _onlineMode = available && granted;
+    });
+  }
+
+  Future<void> _toggleOnlineMode(bool enableOnline) async {
+    if (!enableOnline) {
+      setState(() => _onlineMode = false);
+      return;
+    }
+    final auth = ref.read(authControllerProvider);
+    final user = auth.user;
+    final gateway = ref.read(externalAiGatewayProvider);
+    if (user == null || user.isGuest || !gateway.configured) {
+      setState(() => _onlineMode = false);
+      return;
+    }
+    final consented = await _requestOnlineAiConsent();
+    if (!mounted) return;
+    setState(() => _onlineMode = consented);
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) return;
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   Future<void> _loadConversation() async {
@@ -243,6 +291,7 @@ class _MarkazAiScreenState extends ConsumerState<MarkazAiScreen> {
   @override
   void dispose() {
     _question.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -250,45 +299,75 @@ class _MarkazAiScreenState extends ConsumerState<MarkazAiScreen> {
     final question = (suggested ?? _question.text).trim();
     if (question.isEmpty || _sending) return;
     final urdu = Localizations.localeOf(context).languageCode == 'ur';
-    setState(() => _sending = true);
+    final now = DateTime.now();
+    _question.clear();
+    setState(() {
+      _sending = true;
+      _streamingReply = '';
+      if (_messages.isEmpty) {
+        _conversationTitle = question.length <= 42
+            ? question
+            : '${question.substring(0, 39).trimRight()}...';
+      }
+      _messages = [
+        ..._messages,
+        AiChatMessage(id: -1, role: 'user', content: question, createdAt: now),
+      ];
+    });
+    _scrollToBottom();
     try {
-      final snapshot = await ref.read(intelligenceSnapshotProvider.future);
       final repository = ref.read(aiConversationRepositoryProvider);
+      final snapshotFuture = ref.read(intelligenceSnapshotProvider.future);
       final conversation =
           _conversationId ?? await repository.currentConversation();
-      await repository.addMessage(conversation, 'user', question);
-      await repository.titleFromFirstMessage(conversation, question);
+      _conversationId = conversation;
+      await Future.wait([
+        repository.addMessage(conversation, 'user', question),
+        repository.titleFromFirstMessage(conversation, question),
+      ]);
+      final snapshot = await snapshotFuture;
       final auth = ref.read(authControllerProvider);
       final user = auth.user;
       final gateway = ref.read(externalAiGatewayProvider);
       final canUseOnlineAi =
           user != null && !user.isGuest && gateway.configured;
+      final useOnline = _onlineMode && canUseOnlineAi;
       String answer;
-      if (canUseOnlineAi && await _requestOnlineAiConsent()) {
+      if (useOnline && await _requestOnlineAiConsent()) {
         try {
-          answer = await gateway.send(
+          final buffer = StringBuffer();
+          await for (final chunk in gateway.sendStream(
             prompt: question,
             data: safeAiSummary(snapshot),
-          );
-        } catch (_) {
+          )) {
+            buffer.write(chunk);
+            if (mounted) {
+              setState(() => _streamingReply = buffer.toString());
+              _scrollToBottom();
+            }
+          }
+          answer = buffer.toString().trim();
+          if (answer.isEmpty) {
+            throw StateError('Gemini returned an empty response.');
+          }
+          if (mounted && !_onlineMode) {
+            setState(() => _onlineMode = true);
+          }
+        } catch (error, stackTrace) {
+          debugPrint('Markaz AI online request failed: $error\n$stackTrace');
+          if (mounted) {
+            setState(() => _onlineMode = false);
+          }
           answer = const LocalMarkazQueryEngine().answer(
             question,
             snapshot,
             urdu: urdu,
           );
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  context.l10n.phrase(
-                    'Online AI is unavailable. Showing a local answer instead.',
-                  ),
-                ),
-              ),
-            );
-          }
         }
       } else {
+        if (mounted && _onlineMode) {
+          setState(() => _onlineMode = false);
+        }
         answer = const LocalMarkazQueryEngine().answer(
           question,
           snapshot,
@@ -296,26 +375,31 @@ class _MarkazAiScreenState extends ConsumerState<MarkazAiScreen> {
         );
       }
       await repository.addMessage(conversation, 'assistant', answer);
-      _question.clear();
       final messages = await repository.messages(conversation);
       if (mounted) {
         setState(() {
           _conversationId = conversation;
-          if (_messages.isEmpty) {
-            _conversationTitle = question.length <= 42
-                ? question
-                : '${question.substring(0, 39).trimRight()}...';
-          }
+          _streamingReply = null;
           _messages = messages;
         });
+        _scrollToBottom();
       }
     } finally {
-      if (mounted) setState(() => _sending = false);
+      if (mounted) {
+        setState(() {
+          _sending = false;
+          _streamingReply = null;
+        });
+      }
     }
   }
 
   Future<bool> _requestOnlineAiConsent() async {
-    if (await _aiConsent.granted()) return true;
+    if (_consentGrantedCache == true) return true;
+    if (await _aiConsent.granted()) {
+      _consentGrantedCache = true;
+      return true;
+    }
     if (!mounted) return false;
     final accepted = await showDialog<bool>(
       context: context,
@@ -341,7 +425,10 @@ class _MarkazAiScreenState extends ConsumerState<MarkazAiScreen> {
       ),
     );
     final granted = accepted == true;
-    if (granted) await _aiConsent.setGranted(true);
+    if (granted) {
+      _consentGrantedCache = true;
+      await _aiConsent.setGranted(true);
+    }
     return granted;
   }
 
@@ -364,6 +451,8 @@ class _MarkazAiScreenState extends ConsumerState<MarkazAiScreen> {
           if (consentGranted)
             TextButton(
               onPressed: () async {
+                _consentGrantedCache = false;
+                if (mounted) setState(() => _onlineMode = false);
                 await _aiConsent.setGranted(false);
                 if (dialogContext.mounted) Navigator.pop(dialogContext);
                 if (mounted) {
@@ -447,6 +536,7 @@ class _MarkazAiScreenState extends ConsumerState<MarkazAiScreen> {
         children: [
           Expanded(
             child: ListView(
+              controller: _scrollController,
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
               children: [
                 score.when(
@@ -513,34 +603,98 @@ class _MarkazAiScreenState extends ConsumerState<MarkazAiScreen> {
                       ),
                     ),
                   ),
+                  if (_streamingReply != null)
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Container(
+                        constraints: const BoxConstraints(maxWidth: 330),
+                        margin: const EdgeInsets.only(bottom: 9),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerHigh,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Text(
+                          _streamingReply!.isEmpty
+                              ? context.l10n.phrase('Thinking…')
+                              : _streamingReply!,
+                        ),
+                      ),
+                    ),
               ],
             ),
           ),
           SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-              child: Row(
+              padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _question,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _ask(),
-                      decoration: InputDecoration(
-                        hintText: context.l10n.phrase('Ask Markaz AI…'),
+                  Row(
+                    children: [
+                      Icon(
+                        _onlineMode
+                            ? Icons.cloud_done_outlined
+                            : Icons.smartphone_outlined,
+                        size: 16,
+                        color: _onlineMode
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
-                    ),
+                      const SizedBox(width: 6),
+                      Text(
+                        context.l10n.phrase(
+                          _onlineMode ? 'Online AI' : 'Local AI',
+                        ),
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: _onlineMode
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                            ),
+                      ),
+                      const Spacer(),
+                      Transform.scale(
+                        scale: 0.82,
+                        child: Switch.adaptive(
+                          value: _onlineMode,
+                          onChanged: _sending ? null : _toggleOnlineMode,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  IconButton.filled(
-                    onPressed: _sending ? null : _ask,
-                    icon: _sending
-                        ? const SizedBox.square(
-                            dimension: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.send_rounded),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _question,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _ask(),
+                          decoration: InputDecoration(
+                            hintText: context.l10n.phrase('Ask Markaz AI…'),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton.filled(
+                        onPressed: _sending ? null : _ask,
+                        icon: _sending
+                            ? const SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.send_rounded),
+                      ),
+                    ],
                   ),
                 ],
               ),

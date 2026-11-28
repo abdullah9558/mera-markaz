@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/localization/app_localizations.dart';
+import '../../../core/network/alice_inspector.dart';
 import '../../../core/security/biometric_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/presentation/brand_widgets.dart';
@@ -561,6 +562,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     _SettingsCard(
                       title: context.l10n.phrase('SUPPORT & DATA'),
                       children: [
+                        if (AliceInspector.enabled)
+                          _SettingsTile(
+                            icon: Icons.bug_report_outlined,
+                            label: 'API Inspector (Alice)',
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: AliceInspector.showInspector,
+                          ),
                         _SettingsTile(
                           icon: Icons.feedback_outlined,
                           label: context.l10n.phrase('Send Feedback'),
